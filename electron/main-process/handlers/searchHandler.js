@@ -7,7 +7,7 @@ const path = require('path')
 const { execFile } = require('child_process')
 const {
   validateSearchQuery,
-} = require('../../shared/validation/validators')
+} = require('../../../shared/validation/validators')
 const logger = require('../logger')
 
 /**

@@ -11,7 +11,7 @@ const {
   validateFilePath,
   validateAppPath,
   validateUrlProtocol,
-} = require('../../shared/validation/validators')
+} = require('../../../shared/validation/validators')
 const { extractIconWithTimeout } = require('../services/iconExtractor')
 const { getAllTabs, activateTab } = require('../../../src/services/tabFetcher')
 const { getSettings, saveSettings } = require('../config')
