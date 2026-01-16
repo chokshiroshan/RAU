@@ -1,0 +1,50 @@
+/**
+ * Preload script for ContextSearch
+ * Bridges the main process and renderer using contextBridge
+ *
+ * This script runs in the renderer process but has access to Node.js APIs.
+ * It exposes a safe, limited API to the renderer via contextBridge.
+ */
+
+const { contextBridge, ipcRenderer } = require('electron')
+
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire ipcRenderer object
+contextBridge.exposeInMainWorld('electronAPI', {
+  // Event listeners
+  onWindowShown: (callback) => {
+    ipcRenderer.on('window-shown', callback)
+    // Return unsubscribe function
+    return () => ipcRenderer.removeListener('window-shown', callback)
+  },
+
+  onRendererReady: (callback) => {
+    ipcRenderer.once('renderer-ready', callback)
+  },
+
+  // Commands (invoke/handle pattern - returns Promise)
+  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
+  searchFiles: (query) => ipcRenderer.invoke('search-files', query),
+  getTabs: () => ipcRenderer.invoke('get-tabs'),
+  activateTab: (tab) => ipcRenderer.invoke('activate-tab', tab),
+  getApps: () => ipcRenderer.invoke('get-apps'),
+  getAppIcon: (appPath) => ipcRenderer.invoke('get-app-icon', appPath),
+  openApp: (appPath) => ipcRenderer.invoke('open-app', appPath),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  executeCommand: (action) => ipcRenderer.invoke('execute-command', action),
+  openUrl: (url) => ipcRenderer.invoke('open-url', url),
+
+  // Fire-and-forget messages
+  hideWindow: () => ipcRenderer.send('hide-window'),
+  signalRendererReady: () => ipcRenderer.send('renderer-ready'),
+
+  // Window management
+  resizeWindow: (expanded) => ipcRenderer.invoke('resize-window', expanded),
+
+  // Onboarding state
+  markOnboardingComplete: () => ipcRenderer.invoke('mark-onboarding-complete'),
+})
+
+// Log when preload script is loaded
+console.log('[Preload] Electron API exposed to renderer')

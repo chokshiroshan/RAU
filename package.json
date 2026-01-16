@@ -1,0 +1,43 @@
+{
+  "name": "context-search",
+  "version": "1.0.0",
+  "description": "A macOS launcher app (Spotlight alternative)",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite build && electron .",
+    "dev:vite": "vite",
+    "build": "vite build",
+    "start": "electron .",
+    "test": "node --test tests/search.test.js",
+    "test:tabs": "node --test tests/tabFetcher.test.js",
+    "test:unified": "node --test tests/unifiedSearch.test.js",
+    "test:all": "node --test tests/*.test.js",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "generate-icon": "bash scripts/generate-icon.sh"
+  },
+  "keywords": [
+    "launcher",
+    "spotlight",
+    "electron",
+    "macos"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fuse.js": "^7.1.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.23",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.4.0",
+    "postcss": "^8.5.6",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^4.1.18",
+    "vite": "^7.3.1"
+  }
+}
