@@ -59,13 +59,16 @@ const fuseOptions = {
   ignoreLocation: true,
 }
 
+
 /**
  * Search for apps, files, and tabs
  * @param {string} query - Search query
+ * @param {Object} filters - Optional filters { apps: boolean, files: boolean, tabs: boolean, commands: boolean }
  * @returns {Promise<Array>} Combined array of app, file, and tab results
  */
-export async function searchUnified(query) {
-  console.log('[UnifiedSearch] Search started for query:', query)
+export async function searchUnified(query, filters) {
+  const activeFilters = filters || { apps: true, files: true, tabs: true, commands: true }
+  console.log('[UnifiedSearch] Search started for query:', query, 'Filters:', activeFilters)
 
   if (!query || query.trim() === '') {
     console.log('[UnifiedSearch] Empty query, returning empty')
@@ -103,14 +106,13 @@ export async function searchUnified(query) {
 
     // Get settings to determine which categories to search
     const settings = await ipcRenderer.invoke('get-settings')
-    console.log('[UnifiedSearch] Settings fetched:', settings)
 
-    // Build search promises based on settings
+    // Build search promises based on settings AND component filters
     const searchPromises = []
 
     console.log('[UnifiedSearch] Starting parallel searches...')
 
-    if (settings.searchApps !== false) {
+    if (activeFilters.apps && settings.searchApps !== false) {
       console.log('[UnifiedSearch] App search enabled')
       searchPromises.push(
         getAllApps().catch(err => {
@@ -122,7 +124,7 @@ export async function searchUnified(query) {
       searchPromises.push(Promise.resolve([]))
     }
 
-    if (settings.searchTabs !== false) {
+    if (activeFilters.tabs && settings.searchTabs !== false) {
       console.log('[UnifiedSearch] Tab search enabled')
       searchPromises.push(
         ipcRenderer.invoke('get-tabs').catch(err => {
@@ -134,7 +136,7 @@ export async function searchUnified(query) {
       searchPromises.push(Promise.resolve([]))
     }
 
-    if (settings.searchFiles !== false) {
+    if (activeFilters.files && settings.searchFiles !== false) {
       console.log('[UnifiedSearch] File search enabled')
       searchPromises.push(
         searchFiles(trimmedQuery).catch(err => {
@@ -187,7 +189,7 @@ export async function searchUnified(query) {
     }))
 
     // Search for system commands (these bypass Fuse.js)
-    const commands = searchCommands(trimmedQuery)
+    const commands = activeFilters.commands ? searchCommands(trimmedQuery) : []
     console.log(`[UnifiedSearch] Found ${commands.length} matching commands`)
 
     // Combine all result types for Fuse.js (NOT commands - they are pre-matched)

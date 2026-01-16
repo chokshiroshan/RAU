@@ -9,7 +9,7 @@ import { getHistory, addToHistory } from './services/historyService'
 const ONBOARDING_KEY = 'context-search-onboarding-complete'
 
 // ⚠️ DEBUG: Set to true to reset onboarding on next load
-const DEBUG_RESET_ONBOARDING = false
+const DEBUG_RESET_ONBOARDING = true
 if (DEBUG_RESET_ONBOARDING) {
   localStorage.removeItem(ONBOARDING_KEY)
 }
@@ -22,6 +22,13 @@ function App() {
   const [showHistory, setShowHistory] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem(ONBOARDING_KEY)
+  })
+  // Filter states - must be declared before any early returns
+  const [filters, setFilters] = useState({
+    apps: true,
+    files: true,
+    tabs: true,
+    commands: true
   })
   const searchTimeoutRef = useRef(null)
   const inputRef = useRef(null)
@@ -62,7 +69,7 @@ function App() {
   }, [])
 
   // Debounced search
-  const performSearch = useCallback(async (searchQuery) => {
+  const performSearch = useCallback(async (searchQuery, activeFilters) => {
     if (!searchQuery || searchQuery.trim() === '') {
       setResults([])
       setSelectedIndex(0)
@@ -71,7 +78,7 @@ function App() {
 
     setIsLoading(true)
     try {
-      const searchResults = await searchUnified(searchQuery)
+      const searchResults = await searchUnified(searchQuery, activeFilters)
       setResults(searchResults)
       setSelectedIndex(0)
     } catch (error) {
@@ -89,7 +96,7 @@ function App() {
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      performSearch(query)
+      performSearch(query, filters)
     }, 150)
 
     return () => {
@@ -97,7 +104,7 @@ function App() {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [query, performSearch])
+  }, [query, filters, performSearch])
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
@@ -206,6 +213,12 @@ function App() {
     }
   }, [results])
 
+  // Toggle filter
+  const toggleFilter = useCallback((key) => {
+    setFilters(prev => ({ ...prev, [key]: !prev[key] }))
+    if (inputRef.current) inputRef.current.focus()
+  }, [])
+
   // Handle onboarding completion
   const handleOnboardingComplete = useCallback(() => {
     // Persist to localStorage
@@ -230,20 +243,37 @@ function App() {
       onKeyDown={handleKeyDown}
     >
       <div className="search-window">
-        <SearchBar
-          ref={inputRef}
-          value={query}
-          onChange={setQuery}
-          isLoading={isLoading}
-          hasResults={hasQuery && results.length > 0}
-        />
-        {hasQuery && (
-          <ResultsList
-            results={results}
-            selectedIndex={selectedIndex}
-            onSelect={handleResultClick}
-            onHover={setSelectedIndex}
+        {/* Top Row: Search Pill + Filter Bubbles */}
+        <div className="search-row">
+          <SearchBar
+            ref={inputRef}
+            value={query}
+            onChange={setQuery}
+            isLoading={isLoading}
+            hasResults={hasQuery && results.length > 0}
           />
+
+          <div className="filter-bubbles">
+            <button
+              className="filter-bubble"
+              onClick={() => {/* Open settings */ }}
+              title="Settings"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Detached Results List */}
+        {hasQuery && (
+          <div className="results-container">
+            <ResultsList
+              results={results}
+              selectedIndex={selectedIndex}
+              onSelect={handleResultClick}
+              onHover={setSelectedIndex}
+            />
+          </div>
         )}
       </div>
     </div>

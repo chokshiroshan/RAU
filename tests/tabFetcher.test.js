@@ -65,6 +65,37 @@ describe('Tab Fetcher Tests', () => {
     assert.strictEqual(result, false, 'activateTab should return false for invalid browser')
     console.log('Test 5 passed: activateTab handles invalid browser')
   })
+
+  test('findMatchingTab prefers URL match within browser', () => {
+    const tabs = [
+      {
+        title: 'Example',
+        url: 'https://example.com/',
+        browser: 'Comet',
+        windowIndex: 2,
+        tabIndex: 3,
+      },
+      {
+        title: 'Example',
+        url: 'https://example.com/',
+        browser: 'Chrome',
+        windowIndex: 1,
+        tabIndex: 1,
+      },
+    ]
+
+    const target = {
+      title: 'Example',
+      url: 'https://example.com',
+      browser: 'Comet',
+    }
+
+    const match = tabFetcher.findMatchingTab(target, tabs)
+    assert.strictEqual(match.browser, 'Comet')
+    assert.strictEqual(match.windowIndex, 2)
+    assert.strictEqual(match.tabIndex, 3)
+    console.log('Test 6 passed: findMatchingTab prefers URL match')
+  })
 })
 
 describe('Tab Activation Tests', () => {

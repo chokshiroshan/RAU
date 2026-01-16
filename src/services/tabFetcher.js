@@ -369,6 +369,77 @@ function clearCache() {
   cacheTimestamp = 0
 }
 
+function getBrowserAliases(browser) {
+  if (!browser) return []
+  switch (browser) {
+    case 'Google Chrome':
+      return ['Chrome', 'Google Chrome']
+    case 'Brave Browser':
+      return ['Brave', 'Brave Browser']
+    default:
+      return [browser]
+  }
+}
+
+function normalizeUrl(url) {
+  if (!url) return ''
+  const trimmed = String(url).trim()
+  if (!trimmed) return ''
+  try {
+    const parsed = new URL(trimmed)
+    let normalized = parsed.href
+    if (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.slice(0, -1)
+    }
+    return normalized
+  } catch {
+    if (trimmed.length > 1 && trimmed.endsWith('/')) {
+      return trimmed.slice(0, -1)
+    }
+    return trimmed
+  }
+}
+
+function findMatchingTab(target, tabs) {
+  if (!target || !Array.isArray(tabs)) return null
+
+  const browserAliases = getBrowserAliases(target.browser)
+  const candidates = tabs.filter(tab => browserAliases.includes(tab.browser))
+
+  if (candidates.length === 0) return null
+
+  if (target.url) {
+    const targetUrl = normalizeUrl(target.url)
+    const urlMatch = candidates.find(tab => normalizeUrl(tab.url) === targetUrl)
+    if (urlMatch) return urlMatch
+  }
+
+  if (target.title) {
+    const exactTitleMatch = candidates.find(tab => tab.title === target.title)
+    if (exactTitleMatch) return exactTitleMatch
+
+    const targetTitle = String(target.title).toLowerCase()
+    const caseInsensitiveMatch = candidates.find(tab =>
+      String(tab.title || '').toLowerCase() === targetTitle
+    )
+    if (caseInsensitiveMatch) return caseInsensitiveMatch
+  }
+
+  if (target.windowIndex && target.tabIndex) {
+    const indexMatch = candidates.find(tab =>
+      tab.windowIndex === target.windowIndex && tab.tabIndex === target.tabIndex
+    )
+    if (indexMatch) return indexMatch
+  }
+
+  return null
+}
+
+async function resolveTabFromFreshFetch(target) {
+  const tabs = await refreshTabs()
+  return findMatchingTab(target, tabs)
+}
+
 /**
  * Activate a specific tab in the specified browser
  * @param {Object} tab - Tab object with browser, windowIndex, tabIndex
@@ -501,12 +572,39 @@ async function activateTab(tab) {
   })
 }
 
+/**
+ * Activate a tab with a refresh+resolve retry on failure
+ * @param {Object} tab - Tab object with browser, windowIndex, tabIndex, url/title
+ * @returns {Promise<boolean>} Success status
+ */
+async function activateTabWithRetry(tab) {
+  const initialSuccess = await activateTab(tab)
+  if (initialSuccess) return true
+
+  const resolved = await resolveTabFromFreshFetch(tab)
+  if (!resolved) return false
+
+  const retryTab = {
+    ...tab,
+    browser: resolved.browser,
+    windowIndex: resolved.windowIndex,
+    tabIndex: resolved.tabIndex,
+    url: resolved.url || tab.url,
+    title: resolved.title || tab.title,
+  }
+
+  return activateTab(retryTab)
+}
+
 module.exports = {
   getAllTabs,
   activateTab,
+  activateTabWithRetry,
   prewarmTabs: () => {
     // Start fetching in background without waiting
     getAllTabs().catch(err => safeError('[TabFetcher] Pre-warm error:', err))
   },
   clearCache,
+  resolveTabFromFreshFetch,
+  findMatchingTab,
 }

@@ -13,7 +13,7 @@ const {
   validateUrlProtocol,
 } = require('../../../shared/validation/validators')
 const { extractIconWithTimeout } = require('../services/iconExtractor')
-const { getAllTabs, activateTab } = require('../../../src/services/tabFetcher')
+const { getAllTabs, activateTabWithRetry } = require('../../../src/services/tabFetcher')
 const { getSettings, saveSettings } = require('../config')
 const logger = require('../logger')
 
@@ -83,7 +83,7 @@ async function getTabs() {
  */
 async function activateTabHandler(_event, tab) {
   try {
-    const success = await activateTab(tab)
+    const success = await activateTabWithRetry(tab)
     if (success && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.hide()
     }

@@ -2,5 +2,5 @@
   "searchApps": true,
   "searchTabs": true,
   "searchFiles": true,
-  "onboardingComplete": true
+  "onboardingComplete": false
 }
