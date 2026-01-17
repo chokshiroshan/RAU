@@ -1,17 +1,36 @@
 import React from 'react'
 
+const sharedGradients = (
+  <defs>
+    <linearGradient id="violetMagentaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#8B5CF6" />
+      <stop offset="50%" stopColor="#EC4899" />
+      <stop offset="100%" stopColor="#8B5CF6" />
+    </linearGradient>
+    <linearGradient id="magentaVioletGradient" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#EC4899" />
+      <stop offset="50%" stopColor="#8B5CF6" />
+      <stop offset="100%" stopColor="#EC4899" />
+    </linearGradient>
+  </defs>
+)
+
 const IconRocket = ({ size = 64, className = '' }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
+    stroke="url(#violetMagentaGradient)"
+    strokeWidth={2}
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
+    style={{
+      filter: 'drop-shadow(0 4px 8px rgba(139, 92, 246, 0.3))'
+    }}
   >
+    {sharedGradients}
     <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
     <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
     <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
