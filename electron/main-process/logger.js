@@ -9,7 +9,7 @@ const fs = require('fs')
 const path = require('path')
 
 // Log file location (in user's home directory)
-const LOG_FILE = path.join(require('os').homedir(), '.context-search.log')
+const LOG_FILE = path.join(require('os').homedir(), '.rau.log')
 
 // Track if streams are writable
 let stdoutWritable = true

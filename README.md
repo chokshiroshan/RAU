@@ -1,8 +1,8 @@
-# ContextSearch
+# RAU
 
 A lightning-fast macOS launcher built with Electron + React. Search and open applications, browser tabs, and files from a single unified interface.
 
-![ContextSearch](https://img.shields.io/badge/macOS-11%2B-blue) ![Electron](https://img.shields.io/badge/Electron-latest-green) ![React](https://img.shields.io/badge/React-18-blue)
+![RAU](https://img.shields.io/badge/macOS-11%2B-blue) ![Electron](https://img.shields.io/badge/Electron-latest-green) ![React](https://img.shields.io/badge/React-18-blue)
 
 ## ✨ Features
 
@@ -19,8 +19,8 @@ A lightning-fast macOS launcher built with Electron + React. Search and open app
 
 ```bash
 # Clone and install
-git clone https://github.com/your-username/context-search.git
-cd context-search
+git clone https://github.com/chokshiroshan/RAU.git
+cd RAU
 npm install
 
 # Build the React frontend
@@ -67,7 +67,7 @@ npm run test:all    # Run all tests
 
 ### Project Architecture
 ```
-context-search/
+RAU/
 ├── 📁 electron/                 # Electron main process
 │   ├── main.js                  # Window management, hotkey, IPC handlers
 │   ├── config.js                # Settings management and persistence

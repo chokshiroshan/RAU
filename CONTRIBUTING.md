@@ -1,4 +1,4 @@
-# Contributing to ContextSearch
+# Contributing to RAU
 
 We welcome contributions! This guide will help you get set up for development and understand our contribution process.
 
@@ -13,8 +13,8 @@ We welcome contributions! This guide will help you get set up for development an
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/context-search.git
-cd context-search
+git clone https://github.com/chokshiroshan/RAU.git
+cd RAU
 
 # Install dependencies
 npm install
@@ -219,7 +219,7 @@ What actually happened.
 
 ## Environment
 - macOS version:
-- ContextSearch version:
+- RAU version:
 - Browser versions:
 
 ## Additional Context
@@ -285,4 +285,4 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ---
 
-**Thank you for contributing to ContextSearch!** 🙏
+**Thank you for contributing to RAU!** 🙏
