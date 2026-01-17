@@ -1,10 +1,10 @@
-# ContextSearch Architecture
+# RAU Architecture
 
-This document provides a deep dive into the system design, architecture patterns, and technical implementation of ContextSearch.
+This document provides a deep dive into the system design, architecture patterns, and technical implementation of RAU.
 
 ## 🏗️ System Overview
 
-ContextSearch is a macOS desktop application built with Electron + React that provides unified search across applications, browser tabs, and files. It's designed as a Spotlight alternative with enhanced speed and features.
+RAU is a macOS desktop application built with Electron + React that provides unified search across applications, browser tabs, and files. It's designed as a Spotlight alternative with enhanced speed and features.
 
 ### High-Level Architecture
 

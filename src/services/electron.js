@@ -5,6 +5,8 @@
  * contextBridge API exposed in preload.js (window.electronAPI).
  */
 
+import { logger } from '../utils/logger'
+
 // Get the exposed API from preload script
 const electronAPI = typeof window !== 'undefined' ? window.electronAPI : null
 
@@ -21,13 +23,13 @@ export const electronAPIReady = electronAPI
  */
 async function invoke(method, ...args) {
   if (!electronAPI) {
-    console.warn('[Electron] Not in Electron context, cannot invoke:', method)
+    logger.warn('Electron', 'Not in Electron context, cannot invoke:', method)
     return null
   }
   try {
     return await electronAPI[method](...args)
   } catch (error) {
-    console.error(`[Electron] Error invoking ${method}:`, error)
+    logger.error('Electron', `Error invoking ${method}:`, error)
     throw error
   }
 }
@@ -39,18 +41,27 @@ async function invoke(method, ...args) {
  */
 function send(method, ...args) {
   if (!electronAPI) {
-    console.warn('[Electron] Not in Electron context, cannot send:', method)
+    logger.warn('Electron', 'Not in Electron context, cannot send:', method)
     return
   }
   try {
     electronAPI[method](...args)
   } catch (error) {
-    console.error(`[Electron] Error sending ${method}:`, error)
+    logger.error('Electron', `Error sending ${method}:`, error)
   }
 }
 
-// Convenience exports matching the old ipcRenderer pattern
+/**
+ * Compatibility shim providing ipcRenderer-like API for renderer process.
+ * Maps legacy IPC channel names to the new contextBridge API methods.
+ */
 export const ipcRenderer = {
+  /**
+   * Invoke an IPC handler and wait for response
+   * @param {string} channel - Legacy IPC channel name (e.g., 'get-tabs')
+   * @param {...any} args - Arguments to pass to the handler
+   * @returns {Promise<any>} Result from the main process handler
+   */
   invoke: (channel, ...args) => {
     const methodMap = {
       'open-file': 'openFile',
@@ -75,6 +86,11 @@ export const ipcRenderer = {
     return invoke(method, ...args)
   },
 
+  /**
+   * Send a fire-and-forget message to the main process
+   * @param {string} channel - Legacy IPC channel name
+   * @param {...any} args - Arguments to pass
+   */
   send: (channel, ...args) => {
     const methodMap = {
       'hide-window': 'hideWindow',
@@ -87,6 +103,12 @@ export const ipcRenderer = {
     send(method, ...args)
   },
 
+  /**
+   * Register a listener for events from the main process
+   * @param {string} channel - Legacy IPC channel name
+   * @param {Function} callback - Event handler function
+   * @returns {Function|undefined} Unsubscribe function
+   */
   on: (channel, callback) => {
     const listenerMap = {
       'window-shown': 'onWindowShown',
@@ -98,16 +120,24 @@ export const ipcRenderer = {
     return electronAPI?.[method]?.(callback)
   },
 
+  /**
+   * Register a one-time listener for events from the main process
+   * @param {string} channel - Legacy IPC channel name
+   * @param {Function} callback - Event handler function
+   */
   once: (channel, callback) => {
     if (channel === 'renderer-ready') {
       electronAPI?.onRendererReady?.(callback)
     }
   },
 
+  /**
+   * Remove an event listener (no-op for compatibility)
+   * @param {string} channel - Legacy IPC channel name
+   * @param {Function} callback - Original callback to remove
+   */
   removeListener: (channel, callback) => {
-    // No-op for compatibility: on() returns an unsubscribe function
-    // Legacy code may call removeListener, but cleanup is handled via unsubscribe
-    // This prevents runtime errors when removeListener is called
+    // on() returns an unsubscribe function; this is a no-op for legacy compatibility
   },
 }
 

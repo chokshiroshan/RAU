@@ -1,12 +1,12 @@
 # API Reference
 
-This document describes the IPC API and service interfaces used throughout ContextSearch. Understanding these interfaces is crucial for extending functionality or debugging issues.
+This document describes the IPC API and service interfaces used throughout RAU. Understanding these interfaces is crucial for extending functionality or debugging issues.
 
 ## 🔌 IPC Channel Reference
 
 ### Overview
 
-ContextSearch uses a request/response pattern for all IPC communication. The renderer process sends requests via `window.electronAPI.invoke()` and the main process responds via handlers.
+RAU uses a request/response pattern for all IPC communication. The renderer process sends requests via `window.electronAPI.invoke()` and the main process responds via handlers.
 
 **Channel Convention**: All channels are defined in `src/constants/ipc.js` for centralized management.
 
@@ -562,4 +562,4 @@ All async operations return standardized responses:
 
 ---
 
-This API reference provides the foundation for extending ContextSearch functionality while maintaining consistency and security.
+This API reference provides the foundation for extending RAU functionality while maintaining consistency and security.

@@ -1,10 +1,10 @@
 # AGENTS.md
 
-This file provides guidance to agentic coding agents working with the ContextSearch codebase.
+This file provides guidance to agentic coding agents working with the RAU codebase.
 
 ## Project Overview
 
-ContextSearch is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
+RAU is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
 
 ## Development Commands
 

@@ -2,7 +2,7 @@
 
 A lightning-fast macOS launcher built with Electron + React. Search and open applications, browser tabs, and files from a single unified interface.
 
-![RAU](https://img.shields.io/badge/macOS-11%2B-blue) ![Electron](https://img.shields.io/badge/Electron-latest-green) ![React](https://img.shields.io/badge/React-18-blue)
+![RAU](https://img.shields.io/badge/macOS-11%2B-blue) ![Electron](https://img.shields.io/badge/Electron-latest-green) ![React](https://img.shields.io/badge/React-19-blue)
 
 ## ✨ Features
 
@@ -98,7 +98,7 @@ RAU/
 
 ### Key Technologies
 - **Electron**: Cross-platform desktop app framework
-- **React 18**: Modern UI with hooks and functional components
+- **React 19**: Modern UI with hooks and functional components
 - **Tailwind CSS**: Utility-first styling
 - **Fuse.js**: Fuzzy search with custom scoring
 - **Vite**: Fast development and build tool

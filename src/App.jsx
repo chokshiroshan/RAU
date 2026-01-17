@@ -6,14 +6,10 @@ import Settings from './components/Settings'
 import { searchUnified } from './services/unifiedSearch'
 import { ipcRenderer } from './services/electron'
 import { getHistory, addToHistory } from './services/historyService'
+import { organizeResults } from './utils/resultOrganizer'
+import { logger } from './utils/logger'
 
 const ONBOARDING_KEY = 'rau-onboarding-complete'
-
-// ⚠️ DEBUG: Set to true to reset onboarding on next load
-const DEBUG_RESET_ONBOARDING = false
-if (DEBUG_RESET_ONBOARDING) {
-  localStorage.removeItem(ONBOARDING_KEY)
-}
 
 function App() {
   const [query, setQuery] = useState('')
@@ -41,7 +37,7 @@ function App() {
   useEffect(() => {
     if (!showOnboarding || !ipcRenderer) return
     ipcRenderer.invoke('resize-window', 700).catch(err => {
-      console.error('Failed to resize window for onboarding:', err)
+      logger.error('App', 'Failed to resize window for onboarding', err)
     })
   }, [showOnboarding])
 
@@ -61,7 +57,7 @@ function App() {
       // Debug: confirm React mounted inside Electron
       ipcRenderer.send('renderer-ready')
     } else {
-      console.warn('[Renderer] ipcRenderer unavailable; UI will render but searches will not work.')
+      logger.warn('App', 'ipcRenderer unavailable; UI will render but searches will not work.')
     }
 
     // Focus on initial load
@@ -87,10 +83,11 @@ function App() {
     setIsLoading(true)
     try {
       const searchResults = await searchUnified(searchQuery, activeFilters)
-      setResults(searchResults)
+      const organizedResults = organizeResults(searchResults)
+      setResults(organizedResults)
       setSelectedIndex(0)
     } catch (error) {
-      console.error('Search error:', error)
+      logger.error('App', 'Search error', error)
       setResults([])
     } finally {
       setIsLoading(false)
@@ -138,7 +135,7 @@ function App() {
     // Update Electron window size
     if (ipcRenderer) {
       ipcRenderer.invoke('resize-window', newHeight).catch(err => {
-        console.error('Failed to resize window:', err)
+        logger.error('App', 'Failed to resize window', err)
       })
     }
   }, [results.length, hasQuery, isLoading, showOnboarding, showSettings])
@@ -152,7 +149,7 @@ function App() {
           const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
           if (results.length === 0) return 0
           const nextIndex = Math.min(safePrev + 1, results.length - 1)
-          console.log('[Nav] ArrowDown:', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
+          logger.debug('Nav', 'ArrowDown', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
           return nextIndex
         })
         break
@@ -162,7 +159,7 @@ function App() {
           const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
           if (results.length === 0) return 0
           const nextIndex = Math.max(safePrev - 1, 0)
-          console.log('[Nav] ArrowUp:', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
+          logger.debug('Nav', 'ArrowUp', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
           return nextIndex
         })
         break
@@ -174,7 +171,7 @@ function App() {
           // Handle calculator result - copy to clipboard
           if (result.type === 'calculator') {
             navigator.clipboard.writeText(String(result.result)).catch(err => {
-              console.error('Failed to copy to clipboard:', err)
+              logger.error('App', 'Failed to copy to clipboard', err)
             })
             if (ipcRenderer) ipcRenderer.send('hide-window')
             return
@@ -184,7 +181,7 @@ function App() {
           if (result.type === 'command') {
             if (ipcRenderer) {
               ipcRenderer.invoke('execute-command', result.action).catch(err => {
-                console.error('Failed to execute command:', err)
+                logger.error('App', 'Failed to execute command', err)
               })
             }
             return
@@ -194,7 +191,7 @@ function App() {
           if (result.type === 'web-search') {
             if (ipcRenderer) {
               ipcRenderer.invoke('open-url', result.url).catch(err => {
-                console.error('Failed to open URL:', err)
+                logger.error('App', 'Failed to open URL', err)
               })
             }
             return
@@ -207,19 +204,19 @@ function App() {
           if (result.type === 'app' || result.type === 'history-app') {
             if (ipcRenderer) {
               ipcRenderer.invoke('open-app', result.path).catch(err => {
-                console.error('Failed to open app:', err)
+                logger.error('App', 'Failed to open app', err)
               })
             }
           } else if (result.type === 'tab' || result.type === 'history-tab' || result.type === 'window') {
             if (ipcRenderer) {
               ipcRenderer.invoke('activate-tab', result).catch(err => {
-                console.error('Failed to activate tab:', err)
+                logger.error('App', 'Failed to activate tab', err)
               })
             }
           } else {
             if (ipcRenderer) {
               ipcRenderer.invoke('open-file', result.path).catch(err => {
-                console.error('Failed to open file:', err)
+                logger.error('App', 'Failed to open file', err)
               })
             }
           }
@@ -247,19 +244,19 @@ function App() {
       if (result.type === 'app') {
         if (ipcRenderer) {
           ipcRenderer.invoke('open-app', result.path).catch(err => {
-            console.error('Failed to open app:', err)
+            logger.error('App', 'Failed to open app', err)
           })
         }
       } else if (result.type === 'tab' || result.type === 'window') {
         if (ipcRenderer) {
           ipcRenderer.invoke('activate-tab', result).catch(err => {
-            console.error('Failed to activate tab:', err)
+            logger.error('App', 'Failed to activate tab', err)
           })
         }
       } else {
         if (ipcRenderer) {
           ipcRenderer.invoke('open-file', result.path).catch(err => {
-            console.error('Failed to open file:', err)
+            logger.error('App', 'Failed to open file', err)
           })
         }
       }

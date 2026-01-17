@@ -1,4 +1,5 @@
 import { ipcRenderer } from './electron'
+import { logger } from '../utils/logger'
 
 /**
  * Get all installed macOS applications
@@ -7,7 +8,7 @@ import { ipcRenderer } from './electron'
  */
 export async function getAllApps() {
   if (!ipcRenderer) {
-    console.warn('[AppSearch] ipcRenderer unavailable; cannot fetch apps.')
+    logger.warn('AppSearch', 'ipcRenderer unavailable; cannot fetch apps.')
     return []
   }
 
@@ -15,7 +16,7 @@ export async function getAllApps() {
     const apps = await ipcRenderer.invoke('get-apps')
     return apps
   } catch (error) {
-    console.error('[AppSearch] Error fetching apps:', error)
+    logger.error('AppSearch', 'Error fetching apps', error)
     return []
   }
 }

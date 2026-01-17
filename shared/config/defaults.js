@@ -1,5 +1,5 @@
 /**
- * Default settings for ContextSearch
+ * Default settings for RAU
  */
 
 export const DEFAULT_SETTINGS = {

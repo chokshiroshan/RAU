@@ -1,4 +1,4 @@
--tell application "Terminal"
+tell application "Terminal"
     set tabList to ""
     set winCount to count of windows
     repeat with i from 1 to winCount

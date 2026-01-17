@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ContextSearch is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
+RAU is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
 
 ## Development Commands
 

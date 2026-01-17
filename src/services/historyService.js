@@ -3,6 +3,8 @@
  * Stores recent selections for quick access when search is empty
  */
 
+import { logger } from '../utils/logger'
+
 const HISTORY_KEY = 'rau-history'
 const MAX_HISTORY_SIZE = 20
 
@@ -18,7 +20,7 @@ export function getHistory() {
         const history = JSON.parse(stored)
         return Array.isArray(history) ? history : []
     } catch (error) {
-        console.error('[History] Error reading history:', error)
+        logger.error('History', 'Error reading history', error)
         return []
     }
 }
@@ -51,7 +53,7 @@ export function addToHistory(item) {
 
         localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory))
     } catch (error) {
-        console.error('[History] Error saving to history:', error)
+        logger.error('History', 'Error saving to history', error)
     }
 }
 
@@ -62,7 +64,7 @@ export function clearHistory() {
     try {
         localStorage.removeItem(HISTORY_KEY)
     } catch (error) {
-        console.error('[History] Error clearing history:', error)
+        logger.error('History', 'Error clearing history', error)
     }
 }
 

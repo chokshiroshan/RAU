@@ -7,6 +7,33 @@
 const { execFile } = require('child_process')
 const path = require('path')
 
+/**
+ * Safe logging utilities to prevent EPIPE crashes
+ */
+function safeLog(...args) {
+  try {
+    console.log('[WindowIndexer]', ...args)
+  } catch {
+    // Silently ignore EPIPE errors
+  }
+}
+
+function safeWarn(...args) {
+  try {
+    console.warn('[WindowIndexer]', ...args)
+  } catch {
+    // Silently ignore EPIPE errors
+  }
+}
+
+function safeError(...args) {
+  try {
+    console.error('[WindowIndexer]', ...args)
+  } catch {
+    // Silently ignore EPIPE errors
+  }
+}
+
 // Cache configuration for different app types
 const CACHE_CONFIG = {
   browsers: { duration: 10000, maxSize: 1000 },     // 10s, high change rate
@@ -65,13 +92,13 @@ function executeWindowDiscoveryScript() {
     // Get running applications first
     execFile('osascript', ['-e', 'tell application "System Events" to get name of every application process'], { timeout: 3000 }, (error, stdout, stderr) => {
       if (error) {
-        console.error('[WindowIndexer] Could not get app list:', error.message)
+        safeError('Could not get app list:', error.message)
         resolve([])
         return
       }
 
       if (stderr) {
-        console.warn('[WindowIndexer] Warning getting app list:', stderr)
+        safeWarn('Warning getting app list:', stderr)
       }
 
       try {
@@ -102,11 +129,11 @@ function executeWindowDiscoveryScript() {
           })
         })
 
-        console.log(`[WindowIndexer] Discovered ${windows.length} simulated windows from ${appNames.length} apps`)
+        safeLog(`Discovered ${windows.length} simulated windows from ${appNames.length} apps`)
         resolve(windows)
 
       } catch (parseError) {
-        console.error('[WindowIndexer] Parse error:', parseError)
+        safeError('Parse error:', parseError)
         resolve([])
       }
     })
@@ -184,7 +211,7 @@ async function getSystemWindows(options = {}) {
     windowCache.length > 0 &&
     cacheKey === selectionKey &&
     (now - cacheTimestamp) < cacheConfig.duration) {
-    console.log('[WindowIndexer] Returning cached windows (instant)')
+    safeLog('Returning cached windows (instant)')
     return windowCache
   }
 
@@ -196,7 +223,7 @@ async function getSystemWindows(options = {}) {
   // Fetch fresh windows
   pendingFetch = (async () => {
     try {
-      console.log('[WindowIndexer] Discovering system windows...')
+      safeLog('Discovering system windows...')
       const rawWindows = await executeWindowDiscoveryScript()
 
       // Filter and enhance windows
@@ -216,10 +243,10 @@ async function getSystemWindows(options = {}) {
       cacheTimestamp = now
       cacheKey = selectionKey
 
-      console.log(`[WindowIndexer] Discovered ${enhancedWindows.length} windows from ${new Set(enhancedWindows.map(w => w.appName)).size} apps`)
+      safeLog(`Discovered ${enhancedWindows.length} windows from ${new Set(enhancedWindows.map(w => w.appName)).size} apps`)
       return enhancedWindows
     } catch (error) {
-      console.error('[WindowIndexer] Error discovering windows:', error)
+      safeError('Error discovering windows:', error)
       return windowCache || [] // Return stale cache if available
     } finally {
       pendingFetch = null
@@ -274,7 +301,7 @@ function clearCache() {
   windowCache = null
   cacheTimestamp = 0
   cacheKey = null
-  console.log('[WindowIndexer] Cache cleared')
+  safeLog('Cache cleared')
 }
 
 /**

@@ -31,6 +31,10 @@ if (process.stderr) {
   process.stderr.on('error', () => { stderrWritable.value = false })
 }
 
+/**
+ * Safe console.log wrapper that prevents EPIPE crashes
+ * @param {...any} args - Values to log
+ */
 function safeLog(...args) {
   if (stdoutWritable.value) {
     try {
@@ -41,6 +45,10 @@ function safeLog(...args) {
   }
 }
 
+/**
+ * Safe console.error wrapper that prevents EPIPE crashes
+ * @param {...any} args - Values to log
+ */
 function safeError(...args) {
   if (stderrWritable.value) {
     try {
@@ -333,6 +341,8 @@ async function getAppSpecificData(appName, selectedApps = []) {
 
 /**
  * Get path to dedicated AppleScript for an app
+ * @param {string} appName - Application name
+ * @returns {string|null} Path to dedicated script or null
  */
 function getDedicatedScriptPath(appName) {
   const scriptMap = {
@@ -350,6 +360,9 @@ function getDedicatedScriptPath(appName) {
 
 /**
  * Execute custom script with app name substitution
+ * @param {string} scriptPath - Path to AppleScript template
+ * @param {string} appName - Application name to substitute
+ * @returns {Promise<Array>} Parsed tab results
  */
 function executeCustomScript(scriptPath, appName) {
   return new Promise((resolve) => {
@@ -494,6 +507,8 @@ async function refreshTabs(options = {}) {
 
 /**
  * Deduplicate tabs, prioritizing dedicated scripts over universal discovery
+ * @param {Array} tabs - Array of tab objects to deduplicate
+ * @returns {Array} Deduplicated array of tabs
  */
 function deduplicateTabs(tabs) {
   const seen = new Set()
@@ -560,6 +575,11 @@ function clearCache() {
   clearWindowCache()
 }
 
+/**
+ * Get browser name aliases for matching
+ * @param {string} browser - Browser name
+ * @returns {Array<string>} Array of aliases including the original name
+ */
 function getBrowserAliases(browser) {
   if (!browser) return []
   switch (browser) {
@@ -572,6 +592,11 @@ function getBrowserAliases(browser) {
   }
 }
 
+/**
+ * Normalize URL for comparison (trim, parse, remove trailing slash)
+ * @param {string} url - URL to normalize
+ * @returns {string} Normalized URL
+ */
 function normalizeUrl(url) {
   if (!url) return ''
   const trimmed = String(url).trim()
@@ -591,6 +616,12 @@ function normalizeUrl(url) {
   }
 }
 
+/**
+ * Find a matching tab in a list using URL, title, or index matching
+ * @param {Object} target - Tab to find with browser, url, title, windowIndex, tabIndex
+ * @param {Array} tabs - List of tabs to search
+ * @returns {Object|null} Matching tab or null
+ */
 function findMatchingTab(target, tabs) {
   if (!target || !Array.isArray(tabs)) return null
 
@@ -626,10 +657,20 @@ function findMatchingTab(target, tabs) {
   return null
 }
 
+/**
+ * Normalize app name to lowercase for comparison
+ * @param {string} name - App name to normalize
+ * @returns {string} Normalized name
+ */
 function normalizeAppName(name) {
   return String(name || '').trim().toLowerCase()
 }
 
+/**
+ * Build cache key from selected apps array
+ * @param {Array<string>} selectedApps - Array of selected app names
+ * @returns {string} Cache key
+ */
 function buildSelectionKey(selectedApps) {
   if (!Array.isArray(selectedApps) || selectedApps.length === 0) {
     return 'all'
@@ -641,6 +682,12 @@ function buildSelectionKey(selectedApps) {
     .join('|')
 }
 
+/**
+ * Check if an app is in the selected list (handles aliases)
+ * @param {string} appName - App name to check
+ * @param {Array<string>} selectedApps - List of selected app names
+ * @returns {boolean} True if selected or list is empty
+ */
 function isAppSelected(appName, selectedApps) {
   if (!Array.isArray(selectedApps) || selectedApps.length === 0) return true
 
@@ -660,6 +707,12 @@ function isAppSelected(appName, selectedApps) {
   return alias ? selectedSet.has(alias) : false
 }
 
+/**
+ * Fetch fresh tabs and find a matching one
+ * @param {Object} target - Tab to find
+ * @param {Object} options - Options including selectedApps
+ * @returns {Promise<Object|null>} Matching tab or null
+ */
 async function resolveTabFromFreshFetch(target, options = {}) {
   const tabs = await refreshTabs(options)
   return findMatchingTab(target, tabs)

@@ -1,5 +1,5 @@
 /**
- * Shared configuration for ContextSearch
+ * Shared configuration for RAU
  * Single source of truth for both main and renderer processes
  */
 

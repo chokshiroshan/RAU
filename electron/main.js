@@ -1,5 +1,5 @@
 /**
- * ContextSearch - Main Process Entry Point
+ * RAU - Main Process Entry Point
  *
  * A fast, elegant launcher for macOS.
  * This file serves as the coordinator for all main process modules.
@@ -68,7 +68,7 @@ function preWarmAppsCache() {
 // ============================================================================
 
 app.whenReady().then(() => {
-  logger.log('[App] ContextSearch starting...')
+  logger.log('[App] RAU starting...')
 
   // macOS: Use regular policy so menu bar appears
   if (process.platform === 'darwin') {

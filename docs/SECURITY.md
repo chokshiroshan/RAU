@@ -1,12 +1,12 @@
 # Security Guide
 
-This document covers security considerations, threat models, and best practices for ContextSearch development and usage.
+This document covers security considerations, threat models, and best practices for RAU development and usage.
 
 ## 🔐 Security Model Overview
 
 ### Threat Model
 
-ContextSearch faces several potential security threats:
+RAU faces several potential security threats:
 
 1. **Code Injection**: Malicious input in shell commands
 2. **Privilege Escalation**: Accessing user files without permission
@@ -286,7 +286,7 @@ async function secureHandler(_event, params) {
 
 ### Permission Requirements
 
-ContextSearch requires these macOS permissions:
+RAU requires these macOS permissions:
 
 1. **Accessibility**: Required for AppleScript browser automation
 2. **Automation**: Required for controlling other applications

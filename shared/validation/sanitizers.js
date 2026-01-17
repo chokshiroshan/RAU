@@ -1,5 +1,5 @@
 /**
- * String sanitization utilities for ContextSearch
+ * String sanitization utilities for RAU
  */
 
 /**

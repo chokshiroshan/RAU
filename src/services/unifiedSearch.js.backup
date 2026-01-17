@@ -113,7 +113,7 @@ export async function searchUnified(query, filters) {
 
     logger.debug('UnifiedSearch', 'Starting parallel searches...')
 
-    if (activeFilters.apps && settings && settings.searchApps !== false) {
+    if (activeFilters.apps && settings.searchApps !== false) {
       logger.debug('UnifiedSearch', 'App search enabled')
       searchPromises.push(
         getAllApps().catch(err => {
@@ -125,7 +125,7 @@ export async function searchUnified(query, filters) {
       searchPromises.push(Promise.resolve([]))
     }
 
-    if (activeFilters.tabs && settings && settings.searchTabs !== false) {
+    if (activeFilters.tabs && settings.searchTabs !== false) {
       logger.debug('UnifiedSearch', 'Tab search enabled')
       searchPromises.push(
         ipcRenderer.invoke('get-tabs').catch(err => {
@@ -137,7 +137,7 @@ export async function searchUnified(query, filters) {
       searchPromises.push(Promise.resolve([]))
     }
 
-    if (activeFilters.files && settings && settings.searchFiles !== false) {
+    if (activeFilters.files && settings.searchFiles !== false) {
       logger.debug('UnifiedSearch', 'File search enabled')
       searchPromises.push(
         searchFiles(trimmedQuery).catch(err => {

@@ -39,8 +39,8 @@
     "extendInfo": {
       "LSBackgroundOnly": false,
       "LSUIElement": true,
-      "NSAppleEventsUsageDescription": "ContextSearch needs to control browsers to switch tabs.",
-      "NSAccessibilityUsageDescription": "ContextSearch needs accessibility access to control windows and switch tabs."
+      "NSAppleEventsUsageDescription": "RAU needs to control browsers to switch tabs.",
+      "NSAccessibilityUsageDescription": "RAU needs accessibility access to control windows and switch tabs."
     }
   },
   "dmg": {

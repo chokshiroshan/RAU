@@ -1,122 +1,17 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { ipcRenderer } from '../services/electron'
-import ResultGroup from './ResultGroup'
+import { logger } from '../utils/logger'
 
-// Track in-flight icon requests to prevent duplicates (shared across instances)
 const pendingIconRequests = new Set()
 
 function ResultsList({ results, selectedIndex, onSelect, onHover }) {
   const listRef = useRef(null)
   const [icons, setIcons] = useState(new Map())
-  const [appIcons, setAppIcons] = useState(new Map())
 
-  // Separate app results and group tab/window results by application
-  const { appResults, groupedTabWindowResults } = useMemo(() => {
-    const groups = {}
-    const apps = []
-    const seenItems = new Set()
-
-    results.forEach(result => {
-      // Separate app results
-      if (result.type === 'app') {
-        // Deduplicate apps
-        const appKey = result.path
-        if (!seenItems.has(appKey)) {
-          seenItems.add(appKey)
-          apps.push(result)
-        }
-        return
-      }
-
-      // Create unique key for tab/window deduplication
-      const itemKey = `${result.type}-${result.title || result.name || result.url}-${result.appName || result.browser}-${result.windowIndex || ''}-${result.tabIndex || ''}`
-
-      // Skip duplicate tabs/windows
-      if (seenItems.has(itemKey)) {
-        return
-      }
-      seenItems.add(itemKey)
-
-      const appName = result.appName || result.browser || result.name || 'Other'
-      const category = result.capability?.category || null
-
-      if (!groups[appName]) {
-        groups[appName] = {
-          appName,
-          category,
-          items: [],
-          icon: null
-        }
-      }
-
-      groups[appName].items.push(result)
-    })
-
-    // Convert to array and sort by best score in group
-    const sortedGroups = Object.values(groups).sort((a, b) => {
-      const aBestScore = Math.min(...a.items.map(item => item.score || 999))
-      const bBestScore = Math.min(...b.items.map(item => item.score || 999))
-      return aBestScore - bBestScore
-    })
-
-    // Sort apps by score
-    const sortedApps = apps.sort((a, b) => (a.score || 999) - (b.score || 999))
-
-    return { appResults: sortedApps, groupedTabWindowResults: sortedGroups }
-  }, [results])
-
-  // Calculate flat indices for apps and groups
-  const displayData = useMemo(() => {
-    const items = []
-    let flatIndex = 0
-
-    // Add apps as individual items
-    appResults.forEach(app => {
-      items.push({
-        type: 'app',
-        item: app,
-        flatIndex,
-        groupStartIndex: flatIndex
-      })
-      flatIndex++
-    })
-
-    // Add grouped tab/window results
-    groupedTabWindowResults.forEach(group => {
-      const groupStartIndex = flatIndex
-      items.push({
-        type: 'group',
-        group,
-        groupStartIndex
-      })
-      flatIndex += group.items.length
-    })
-
-    console.log('[ResultsList] Display data:', {
-      appCount: appResults.length,
-      groupCount: groupedTabWindowResults.length,
-      totalItems: items.length,
-      finalFlatIndex: flatIndex,
-      currentSelectedIndex: selectedIndex,
-      displayData: items.map(item => ({ type: item.type, flatIndex: item.flatIndex, groupStartIndex: item.groupStartIndex }))
-    })
-    return items
-  }, [appResults, groupedTabWindowResults, selectedIndex])
-
-  // Get the selected result from flat index
-  const selectedResult = useMemo(() => {
-    if (selectedIndex >= 0 && selectedIndex < results.length) {
-      return results[selectedIndex]
-    }
-    return null
-  }, [results, selectedIndex])
-
-  // Scroll selected item into view
   useEffect(() => {
     const listEl = listRef.current
     if (!listEl) return
 
-    // Wait for DOM to reflect the new selected state (important for nested group items)
     const rafId = requestAnimationFrame(() => {
       const selectedEl = listEl.querySelector('.result-item.selected')
       if (!selectedEl) return
@@ -130,7 +25,6 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     return () => cancelAnimationFrame(rafId)
   }, [selectedIndex])
 
-  // Load icons for app results on-demand with deduplication and batch loading
   useEffect(() => {
     let isCancelled = false
     const BATCH_SIZE = 5
@@ -138,7 +32,6 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     const loadAppIcons = async () => {
       if (!ipcRenderer) return
 
-      // Filter results that need icons and aren't already being fetched
       const resultsToProcess = results.filter(result =>
         result.type === 'app' &&
         !result.icon &&
@@ -146,16 +39,14 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
         !pendingIconRequests.has(result.path)
       )
 
-      // Process in batches to limit concurrent requests
       for (let i = 0; i < resultsToProcess.length; i += BATCH_SIZE) {
-        if (isCancelled) return // Stop if results changed
+        if (isCancelled) return
 
         const batch = resultsToProcess.slice(i, i + BATCH_SIZE)
 
         await Promise.all(batch.map(async (result) => {
-          if (isCancelled) return // Check again before each request
+          if (isCancelled) return
 
-          // Mark this path as being fetched
           pendingIconRequests.add(result.path)
 
           try {
@@ -164,9 +55,8 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
               setIcons(prev => new Map(prev).set(result.path, icon))
             }
           } catch (error) {
-            console.error('[ResultsList] Error loading app icon:', error)
+            logger.error('ResultsList', 'Error loading app icon', error)
           } finally {
-            // Remove from pending set regardless of success/failure
             pendingIconRequests.delete(result.path)
           }
         }))
@@ -175,18 +65,15 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
 
     loadAppIcons()
 
-    // Cleanup: mark as cancelled when results change or component unmounts
     return () => {
       isCancelled = true
     }
   }, [results])
 
-  // Don't render anything if no results (like Spotlight)
   if (results.length === 0) {
     return null
   }
 
-  // Update results with icons
   const resultsWithIcons = results.map(result =>
     result.type === 'app' && icons.has(result.path)
       ? { ...result, icon: icons.get(result.path) }
@@ -195,33 +82,20 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
 
   return (
     <div className="results-list" ref={listRef}>
-      {displayData.map((displayItem, displayIndex) => {
-        if (displayItem.type === 'app') {
-          // Render individual app result
-          const app = displayItem.item
-          const index = results.findIndex(r => r === app)
-          const appWithIcon = resultsWithIcons[index] || app
-          const isSelected = index === selectedIndex
+      {resultsWithIcons.map((item, index) => {
+        const isSelected = index === selectedIndex
 
-          console.log('[ResultsList] App item:', {
-            appName: app.name,
-            flatIndex: index,
-            groupStartIndex: displayItem.groupStartIndex,
-            selectedIndex,
-            isSelected
-          })
-
+        if (!item._isGroupStart && !item._groupName) {
           return (
             <div
-              key={app.path}
+              key={item.path || item.id || item.url || index}
               className={`result-item app-result ${isSelected ? 'selected' : ''}`}
-              style={{ '--stagger-index': displayIndex }}
               onClick={() => onSelect(index)}
               onMouseEnter={() => onHover(index)}
             >
               <div className="result-icon">
-                {appWithIcon.icon ? (
-                  <img src={appWithIcon.icon} alt={app.name} className="app-icon-img" />
+                {item.icon ? (
+                  <img src={item.icon} alt={item.name} className="app-icon-img" />
                 ) : (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -234,34 +108,76 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
+                    {item.type === 'command' ? (
+                        <>
+                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                        </>
+                    ) : (
+                        <>
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </>
+                    )}
                   </svg>
                 )}
               </div>
               <div className="result-content">
-                <div className="result-name">{app.name}</div>
-                <div className="result-path">{app.path}</div>
+                <div className="result-name">{item.name}</div>
+                {item.type === 'app' && <div className="result-path">{item.path}</div>}
               </div>
             </div>
           )
         }
 
-        // Render grouped tab/window results
-        const group = displayItem.group
         return (
-          <ResultGroup
-            key={group.appName}
-            group={{ ...group, items: group.items.map(item => {
-              const index = results.findIndex(r => r === item)
-              return resultsWithIcons[index] || item
-            }) }}
-            selectedIndex={selectedIndex}
-            onSelect={onSelect}
-            onHover={onHover}
-            groupIndex={displayIndex}
-            flatIndex={displayItem.groupStartIndex}
-          />
+            <React.Fragment key={`${item._groupName}-${item.name}-${index}`}>
+                {item._isGroupStart && (
+                    <div className="group-header">
+                        <span className="group-icon">
+                            {item._groupIcon ? (
+                                <img src={item._groupIcon} alt="" />
+                            ) : (
+                                <span className="icon-fallback">📂</span>
+                            )}
+                        </span>
+                        <span className="group-name">{item._groupName}</span>
+                        <span className="group-count">{item._groupItemCount}</span>
+                    </div>
+                )}
+                
+                <div
+                    className={`result-item group-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => onSelect(index)}
+                    onMouseEnter={() => onHover(index)}
+                >
+                    <div className="result-icon">
+                       <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="2" y1="12" x2="22" y2="12" />
+                          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                    </div>
+                    <div className="result-content">
+                        <div className="result-name">
+                            {item.name}
+                            <span className="result-browser-badge">{item.browser}</span>
+                        </div>
+                        <div className="result-path">{item.url}</div>
+                    </div>
+                </div>
+            </React.Fragment>
         )
       })}
     </div>

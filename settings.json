@@ -1,5 +1,8 @@
 {
   "searchApps": true,
   "searchTabs": true,
-  "searchFiles": false
+  "searchFiles": true,
+  "searchCommands": true,
+  "onboardingComplete": false,
+  "selectedApps": []
 }

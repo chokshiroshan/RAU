@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate a 1024x1024 PNG icon for ContextSearch
+ * Generate a 1024x1024 PNG icon for RAU
  * Creates an abstract "C" / context logo design
  */
 

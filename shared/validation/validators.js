@@ -1,5 +1,5 @@
 /**
- * Input validation utilities for ContextSearch
+ * Input validation utilities for RAU
  * Provides centralized validation for all IPC handlers
  */
 

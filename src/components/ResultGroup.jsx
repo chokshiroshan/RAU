@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import GroupHeader from './GroupHeader'
+import { logger } from '../utils/logger'
 
 function ResultGroup({ group, selectedIndex, onSelect, onHover, groupIndex, flatIndex }) {
   const [isExpanded, setIsExpanded] = useState(true)
@@ -40,7 +41,7 @@ function ResultGroup({ group, selectedIndex, onSelect, onHover, groupIndex, flat
             const itemFlatIndex = flatIndex + index
             const isSelected = itemFlatIndex === selectedIndex
             if (group.appName.includes('Comet') || group.appName.includes('Safari')) {
-              console.log(`[ResultGroup] ${group.appName} item #${index}:`, {
+              logger.debug('ResultGroup', `${group.appName} item #${index}`, {
                 itemFlatIndex,
                 selectedIndex,
                 isSelected,
@@ -51,7 +52,7 @@ function ResultGroup({ group, selectedIndex, onSelect, onHover, groupIndex, flat
             }
             return (
               <div
-                key={item.type === 'tab' || item.type === 'window' ? (item.url || item.title || item.name) : item.type === 'app' ? item.path : item.type === 'command' ? item.id : item.type === 'web-search' ? 'web-search' : item.path}
+                key={`${item.type}-${item.url || item.path || item.name || item.id}-${index}`}
                 className={`result-item ${isSelected ? 'selected' : ''} ${item.type}-result`}
                 onClick={() => onSelect(itemFlatIndex)}
                 onMouseEnter={() => onHover(itemFlatIndex)}

@@ -1,4 +1,5 @@
 import React from 'react'
+import { logger } from '../utils/logger'
 
 /**
  * Error Boundary component to catch and display React render errors
@@ -15,7 +16,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('[ErrorBoundary] Caught error:', error, errorInfo)
+    logger.error('ErrorBoundary', 'Caught error', error, errorInfo)
   }
 
   handleRetry = () => {

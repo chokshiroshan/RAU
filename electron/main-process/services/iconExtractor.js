@@ -7,6 +7,7 @@ const path = require('path')
 const fs = require('fs')
 const { execFile } = require('child_process')
 const os = require('os')
+const logger = require('../logger')
 
 // Configuration
 const ICON_SIZE = 64
@@ -58,7 +59,7 @@ function getIconNameFromPlist(appPath) {
 
     return null
   } catch (error) {
-    console.error(`[IconExtractor] Failed to read Info.plist for ${path.basename(appPath)}:`, error.message)
+    logger.error(`[IconExtractor] Failed to read Info.plist for ${path.basename(appPath)}:`, error.message)
     return null
   }
 }

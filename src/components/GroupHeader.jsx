@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { ipcRenderer } from '../services/electron'
+import { logger } from '../utils/logger'
 
 function GroupHeader({ appName, category, itemCount, isExpanded, onToggle, icon, result }) {
   const headerRef = useRef(null)
@@ -20,7 +21,7 @@ function GroupHeader({ appName, category, itemCount, isExpanded, onToggle, icon,
           setAppIcon(iconData)
         }
       } catch (error) {
-        console.error('[GroupHeader] Error loading app icon:', error)
+        logger.error('GroupHeader', 'Error loading app icon', error)
       }
     }
 

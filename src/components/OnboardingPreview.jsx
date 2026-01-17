@@ -16,7 +16,7 @@ const SCENES = [
     caption: 'Jump to the exact tab.',
     query: 'design system',
     results: [
-      { icon: '🌐', name: 'ContextSearch UI — Figma', meta: 'figma.com', badge: 'Chrome' },
+      { icon: '🌐', name: 'RAU UI — Figma', meta: 'figma.com', badge: 'Chrome' },
       { icon: '📄', name: 'Design Tokens Doc', meta: 'notion.so', badge: 'Safari' },
       { icon: '🧠', name: 'Glassmorphism examples', meta: 'github.com', badge: 'Brave' },
     ],

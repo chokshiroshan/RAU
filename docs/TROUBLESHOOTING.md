@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide covers common issues, debugging techniques, and solutions for ContextSearch problems.
+This guide covers common issues, debugging techniques, and solutions for RAU problems.
 
 ## 🔧 Quick Debugging
 
@@ -25,8 +25,8 @@ npm start
 
 ### Check Permissions
 Go to **System Preferences → Security & Privacy → Privacy** and ensure:
-- ✅ **Accessibility**: ContextSearch is checked
-- ✅ **Automation**: ContextSearch is checked
+- ✅ **Accessibility**: RAU is checked
+- ✅ **Automation**: RAU is checked
 
 ## 🚨 Common Issues
 
@@ -43,14 +43,14 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
    - Look for other apps using Cmd+Shift+Space
    - Change conflicting shortcut
 
-2. **Restart ContextSearch**:
+2. **Restart RAU**:
    ```bash
-   pkill -f ContextSearch
+   pkill -f RAU
    npm start
    ```
 
 3. **Check app focus**:
-   - Ensure ContextSearch is running (check Activity Monitor)
+   - Ensure RAU is running (check Activity Monitor)
    - Try focusing the app and then pressing the hotkey
 
 ---
@@ -84,8 +84,8 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
 
 1. **Check Permissions**:
    - Go to **System Preferences → Security & Privacy → Privacy → Accessibility**
-   - Add ContextSearch if not present
-   - Restart ContextSearch after adding permissions
+   - Add RAU if not present
+   - Restart RAU after adding permissions
 
 2. **Check Browser Status**:
    - Ensure browser is running
@@ -177,7 +177,7 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
 **Solutions**:
 
 1. **Check Permissions**:
-   - ContextSearch needs read access to `/Applications/`
+   - RAU needs read access to `/Applications/`
    - Ensure no security software is blocking it
 
 2. **Increase Icon Cache Size**:
@@ -212,7 +212,7 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
 
 1. **Check Multi-Monitor Setup**:
    - Ensure monitors are arranged correctly in System Preferences
-   - Try restarting ContextSearch after changing monitor arrangement
+   - Try restarting RAU after changing monitor arrangement
 
 2. **Manual Repositioning**:
    - The window should automatically reposition to cursor location
@@ -266,7 +266,7 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
 
 1. **Use Correct Permission Path**:
    - **System Preferences → Security & Privacy → Privacy → Accessibility**
-   - Drag and drop ContextSearch into the list (don't use + button)
+   - Drag and drop RAU into the list (don't use + button)
 
 2. **Check Security Settings**:
    - Ensure system security allows third-party apps
@@ -288,7 +288,7 @@ Go to **System Preferences → Security & Privacy → Privacy** and ensure:
 **Solutions**:
 
 1. **Check Minimum Query Length**:
-   - ContextSearch requires at least 2 characters
+   - RAU requires at least 2 characters
    - Single character searches are disabled
 
 2. **Check Search Categories**:
@@ -390,9 +390,9 @@ window.electronAPI.invoke = (channel, ...args) => {
 ### Monitor Memory Usage
 
 ```bash
-# Watch ContextSearch memory
+# Watch RAU memory
 while true; do
-  ps aux | grep -i contextsearch | grep -v grep
+  ps aux | grep -i rau | grep -v grep
   sleep 5
 done
 ```
@@ -424,7 +424,7 @@ Before reporting issues, collect:
    system_profiler SPDisplaysDataType
    ```
 
-2. **ContextSearch Version**:
+2. **RAU Version**:
    Check `package.json` version
 
 3. **Debug Logs**:
@@ -441,7 +441,7 @@ Before reporting issues, collect:
 
 Include in your report:
 - macOS version
-- ContextSearch version
+- RAU version
 - Steps to reproduce
 - Debug logs
 - Screenshots if applicable

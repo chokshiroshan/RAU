@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { ipcRenderer } from '../services/electron'
+import { logger } from '../utils/logger'
 
 const SLIDES = [
     {
@@ -88,7 +89,7 @@ function Onboarding({ onComplete }) {
                 onboardingComplete: true,
             })
         } catch (error) {
-            console.error('[Onboarding] Failed to save settings:', error)
+            logger.error('Onboarding', 'Failed to save settings', error)
         }
     }, [apps.length, selectedApps])
 
@@ -146,7 +147,7 @@ function Onboarding({ onComplete }) {
                 setApps(appNames)
                 setSelectedApps(appNames)
             } catch (error) {
-                console.error('[Onboarding] Failed to load apps:', error)
+                logger.error('Onboarding', 'Failed to load apps', error)
             } finally {
                 if (!isCancelled) setIsLoadingApps(false)
             }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { ipcRenderer } from '../services/electron'
+import { logger } from '../utils/logger'
 
 function Settings({ isOpen, onClose }) {
   const [settings, setSettings] = useState({
@@ -13,7 +14,7 @@ function Settings({ isOpen, onClose }) {
       const currentSettings = await ipcRenderer.invoke('get-settings')
       setSettings(currentSettings)
     } catch (error) {
-      console.error('Error loading settings:', error)
+      logger.error('Settings', 'Error loading settings', error)
     }
   }, [])
 
@@ -52,7 +53,7 @@ function Settings({ isOpen, onClose }) {
     try {
       await ipcRenderer.invoke('save-settings', newSettings)
     } catch (error) {
-      console.error('Error saving settings:', error)
+      logger.error('Settings', 'Error saving settings', error)
       // Revert on error
       setSettings(settings)
     }

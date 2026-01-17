@@ -1,5 +1,6 @@
 import Fuse from 'fuse.js'
 import { ipcRenderer } from './electron'
+import { logger } from '../utils/logger'
 
 // Fuse.js options for fuzzy search
 const fuseOptions = {
@@ -23,7 +24,7 @@ export async function searchFiles(query) {
 
   try {
     if (!ipcRenderer) {
-      console.warn('[FileSearch] ipcRenderer unavailable; cannot invoke main-process search.')
+      logger.warn('FileSearch', 'ipcRenderer unavailable; cannot invoke main-process search.')
       return []
     }
 
@@ -47,7 +48,7 @@ export async function searchFiles(query) {
         score: result.score,
       }))
   } catch (error) {
-    console.error('File search error:', error)
+    logger.error('FileSearch', 'File search error', error)
     return []
   }
 }

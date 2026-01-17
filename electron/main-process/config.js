@@ -1,5 +1,6 @@
 const path = require('path')
 const fs = require('fs')
+const logger = require('./logger')
 
 // Get the path to the settings file
 // Store it in the app's directory for portability
@@ -37,7 +38,7 @@ function getSettings() {
     if (!fs.existsSync(configPath)) {
       // Create default config file
       fs.writeFileSync(configPath, JSON.stringify(DEFAULT_SETTINGS, null, 2))
-      console.log('[Config] Created default settings file:', configPath)
+      logger.log('[Config] Created default settings file:', configPath)
       return { ...DEFAULT_SETTINGS }
     }
 
@@ -48,7 +49,7 @@ function getSettings() {
     // Merge with defaults to ensure all keys exist
     return { ...DEFAULT_SETTINGS, ...settings }
   } catch (error) {
-    console.error('[Config] Error reading settings:', error)
+    logger.error('[Config] Error reading settings:', error)
     return { ...DEFAULT_SETTINGS }
   }
 }
@@ -65,10 +66,10 @@ function saveSettings(settings) {
 
     // Write to config file
     fs.writeFileSync(configPath, JSON.stringify(mergedSettings, null, 2))
-    console.log('[Config] Saved settings:', mergedSettings)
+    logger.log('[Config] Saved settings:', mergedSettings)
     return true
   } catch (error) {
-    console.error('[Config] Error saving settings:', error)
+    logger.error('[Config] Error saving settings:', error)
     return false
   }
 }
