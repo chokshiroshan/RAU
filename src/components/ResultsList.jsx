@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { ipcRenderer } from '../services/electron'
+import ResultGroup from './ResultGroup'
 
 // Track in-flight icon requests to prevent duplicates (shared across instances)
 const pendingIconRequests = new Set()
@@ -8,6 +9,132 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
   const listRef = useRef(null)
   const selectedRef = useRef(null)
   const [icons, setIcons] = useState(new Map())
+  const [appIcons, setAppIcons] = useState(new Map())
+
+  // Separate app results and group tab/window results by application
+  const { appResults, groupedTabWindowResults } = useMemo(() => {
+    const groups = {}
+    const apps = []
+    const seenItems = new Set()
+
+    results.forEach(result => {
+      // Separate app results
+      if (result.type === 'app') {
+        // Deduplicate apps
+        const appKey = result.path
+        if (!seenItems.has(appKey)) {
+          seenItems.add(appKey)
+          apps.push(result)
+        }
+        return
+      }
+
+      // Create unique key for tab/window deduplication
+      const itemKey = `${result.type}-${result.title || result.name || result.url}-${result.appName || result.browser}-${result.windowIndex || ''}-${result.tabIndex || ''}`
+
+      // Skip duplicate tabs/windows
+      if (seenItems.has(itemKey)) {
+        return
+      }
+      seenItems.add(itemKey)
+
+      const appName = result.appName || result.browser || result.name || 'Other'
+      const category = result.capability?.category || null
+
+      if (!groups[appName]) {
+        groups[appName] = {
+          appName,
+          category,
+          items: [],
+          icon: null
+        }
+      }
+
+      groups[appName].items.push(result)
+    })
+
+    // Convert to array and sort by best score in group
+    const sortedGroups = Object.values(groups).sort((a, b) => {
+      const aBestScore = Math.min(...a.items.map(item => item.score || 999))
+      const bBestScore = Math.min(...b.items.map(item => item.score || 999))
+      return aBestScore - bBestScore
+    })
+
+    // Sort apps by score
+    const sortedApps = apps.sort((a, b) => (a.score || 999) - (b.score || 999))
+
+    return { appResults: sortedApps, groupedTabWindowResults: sortedGroups }
+  }, [results])
+
+  // Calculate flat indices for apps and groups
+  const displayData = useMemo(() => {
+    const items = []
+    let flatIndex = 0
+
+    // Add apps as individual items
+    appResults.forEach(app => {
+      items.push({
+        type: 'app',
+        item: app,
+        flatIndex,
+        groupStartIndex: flatIndex
+      })
+      flatIndex++
+    })
+
+    // Add grouped tab/window results
+    groupedTabWindowResults.forEach(group => {
+      const groupStartIndex = flatIndex
+      items.push({
+        type: 'group',
+        group,
+        groupStartIndex
+      })
+      flatIndex += group.items.length
+    })
+
+    console.log('[ResultsList] Display data:', {
+      appCount: appResults.length,
+      groupCount: groupedTabWindowResults.length,
+      totalItems: items.length,
+      finalFlatIndex: flatIndex,
+      currentSelectedIndex: selectedIndex,
+      displayData: items.map(item => ({ type: item.type, flatIndex: item.flatIndex, groupStartIndex: item.groupStartIndex }))
+    })
+    return items
+  }, [appResults, groupedTabWindowResults, selectedIndex])
+
+  // Get the selected result from flat index
+  const selectedResult = useMemo(() => {
+    if (selectedIndex >= 0 && selectedIndex < results.length) {
+      return results[selectedIndex]
+    }
+    return null
+  }, [results, selectedIndex])
+
+  // Find which element should be scrolled into view
+  const getScrollElementIndex = useCallback(() => {
+    if (!selectedResult) return null
+
+    // Check if it's an app result
+    if (selectedResult.type === 'app') {
+      const index = appResults.findIndex(app => app === selectedResult)
+      if (index !== -1) {
+        return { isApp: true, index }
+      }
+    }
+
+    // Check if it's in a group
+    for (const group of groupedTabWindowResults) {
+      const itemIndex = group.items.findIndex(item =>
+        item === selectedResult
+      )
+      if (itemIndex !== -1) {
+        return { isApp: false, groupIndex: group.groupStartIndex, itemIndex }
+      }
+    }
+    return null
+  }, [selectedResult, appResults, groupedTabWindowResults])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -75,119 +202,85 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     return null
   }
 
+  // Update results with icons
+  const resultsWithIcons = results.map(result =>
+    result.type === 'app' && icons.has(result.path)
+      ? { ...result, icon: icons.get(result.path) }
+      : result
+  )
+
   return (
     <div className="results-list" ref={listRef}>
-      {results.map((result, index) => (
-        <div
-          key={result.type === 'tab' ? result.url : result.type === 'app' ? result.path : result.type === 'command' ? result.id : result.type === 'web-search' ? 'web-search' : result.path}
-          ref={index === selectedIndex ? selectedRef : null}
-          className={`result-item ${index === selectedIndex ? 'selected' : ''} ${result.type}-result`}
-          onClick={() => onSelect(index)}
-          onMouseEnter={() => onHover(index)}
-        >
-          <div className="result-icon">
-            {result.type === 'command' ? (
-              // Command emoji icon
-              <span className="command-icon">{result.icon}</span>
-            ) : result.type === 'web-search' ? (
-              // Web search icon
-              <span className="web-search-icon">{result.icon || '🔍'}</span>
-            ) : result.type === 'calculator' ? (
-              // Calculator icon
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ color: '#10B981' }}
-              >
-                <rect x="4" y="2" width="16" height="20" rx="2" />
-                <line x1="8" y1="6" x2="16" y2="6" />
-                <line x1="8" y1="10" x2="8" y2="10.01" />
-                <line x1="12" y1="10" x2="12" y2="10.01" />
-                <line x1="16" y1="10" x2="16" y2="10.01" />
-                <line x1="8" y1="14" x2="8" y2="14.01" />
-                <line x1="12" y1="14" x2="12" y2="14.01" />
-                <line x1="16" y1="14" x2="16" y2="14.01" />
-                <line x1="8" y1="18" x2="8" y2="18.01" />
-                <line x1="12" y1="18" x2="16" y2="18" />
-              </svg>
-            ) : result.type === 'app' ? (
-              // App icon
-              (icons.get(result.path) || result.icon) ? (
-                <img src={icons.get(result.path) || result.icon} alt={result.name} className="app-icon-img" />
-              ) : (
-                // Fallback app icon while loading
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              )
-            ) : result.type === 'tab' ? (
-              // Globe icon for tabs
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-            ) : (
-              // File icon for files
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-            )}
-          </div>
-          <div className="result-content">
-            <div className="result-name">
-              {result.name}
-              {result.type === 'tab' && (
-                <span className="result-browser-badge">{result.browser}</span>
-              )}
-            </div>
-            {result.type !== 'app' && (
-              <div className="result-path">
-                {result.type === 'tab' ? result.url : result.path}
+      {displayData.map((displayItem, displayIndex) => {
+        if (displayItem.type === 'app') {
+          // Render individual app result
+          const app = displayItem.item
+          const index = results.findIndex(r => r === app)
+          const appWithIcon = resultsWithIcons[index] || app
+          const isSelected = index === selectedIndex
+
+          console.log('[ResultsList] App item:', {
+            appName: app.name,
+            flatIndex: index,
+            groupStartIndex: displayItem.groupStartIndex,
+            selectedIndex,
+            isSelected
+          })
+
+          return (
+            <div
+              key={app.path}
+              ref={isSelected ? selectedRef : null}
+              className={`result-item app-result ${isSelected ? 'selected' : ''}`}
+              style={{ '--stagger-index': displayIndex }}
+              onClick={() => onSelect(index)}
+              onMouseEnter={() => onHover(index)}
+            >
+              <div className="result-icon">
+                {appWithIcon.icon ? (
+                  <img src={appWithIcon.icon} alt={app.name} className="app-icon-img" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      ))}
+              <div className="result-content">
+                <div className="result-name">{app.name}</div>
+                <div className="result-path">{app.path}</div>
+              </div>
+            </div>
+          )
+        }
+
+        // Render grouped tab/window results
+        const group = displayItem.group
+        return (
+          <ResultGroup
+            key={group.appName}
+            group={{ ...group, items: group.items.map(item => {
+              const index = results.findIndex(r => r === item)
+              return resultsWithIcons[index] || item
+            }) }}
+            selectedIndex={selectedIndex}
+            onSelect={onSelect}
+            onHover={onHover}
+            groupIndex={displayIndex}
+            flatIndex={displayItem.groupStartIndex}
+          />
+        )
+      })}
     </div>
   )
 }

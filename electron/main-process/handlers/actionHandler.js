@@ -24,6 +24,97 @@ const iconCache = new Map()
 let mainWindow = null
 
 /**
+ * Check if an app is runnable (exclude non-runnable system services)
+ * @param {string} appPath - Path to the app bundle
+ * @returns {boolean} True if the app is runnable
+ */
+function isRunnableApp(appPath) {
+  // Specific important system apps to include (even in CoreServices)
+  const systemAppsToInclude = [
+    'Finder.app',
+    'System Preferences.app',
+    'System Settings.app',
+    'Activity Monitor.app',
+    'Terminal.app',
+    'Console.app',
+    'Disk Utility.app',
+    'Safari.app',
+    'Mail.app',
+    'Calendar.app',
+    'Contacts.app',
+    'Notes.app',
+    'Reminders.app',
+    'Photos.app',
+    'Music.app',
+    'TV.app',
+    'Podcasts.app',
+    'FaceTime.app',
+    'Messages.app',
+    'Maps.app',
+    'Weather.app',
+    'Stocks.app',
+    'Home.app',
+    'News.app',
+    'Voice Memos.app',
+    'Calculator.app',
+    'Preview.app',
+    'TextEdit.app',
+    'QuickTime Player.app',
+    'Image Capture.app',
+    'ColorSync Utility.app',
+    'Digital Color Meter.app',
+    'Grapher.app',
+    'Keychain Access.app',
+    'Script Editor.app',
+    'System Information.app',
+    'AirPort Utility.app',
+    'Bluetooth File Exchange.app',
+    'Migration Assistant.app',
+    'Boot Camp Assistant.app',
+  ]
+
+  // Check if this is a specific system app we want to include
+  for (const app of systemAppsToInclude) {
+    if (appPath.includes('/' + app)) {
+      return true
+    }
+  }
+
+  // Exclude non-runnable system services and background agents
+  const excludePatterns = [
+    '/System/Library/CoreServices/',
+    '/System/Library/PrivateFrameworks/',
+    '/System/Library/Services/',
+    '/System/Library/Assistant/',
+    '/usr/libexec/',
+  ]
+
+  // Include patterns for legitimate apps
+  const includePatterns = [
+    '/Applications/',
+    '/System/Applications/',
+    '/Users/',
+  ]
+
+  // Check if path matches any exclude pattern
+  for (const pattern of excludePatterns) {
+    if (appPath.includes(pattern)) {
+      return false
+    }
+  }
+
+  // Check if path matches any include pattern
+  for (const pattern of includePatterns) {
+    if (appPath.includes(pattern)) {
+      return true
+    }
+  }
+
+  // Default to false for unknown locations
+  return false
+}
+
+/**
  * Set the main window reference
  */
 function setMainWindow(window) {
@@ -71,7 +162,8 @@ async function openFile(_event, filePath) {
  */
 async function getTabs() {
   try {
-    return await getAllTabs()
+    const settings = getSettings()
+    return await getAllTabs({ selectedApps: settings.selectedApps })
   } catch (error) {
     logger.error('[ActionHandler] Error getting tabs:', error)
     return []
@@ -83,7 +175,8 @@ async function getTabs() {
  */
 async function activateTabHandler(_event, tab) {
   try {
-    const success = await activateTabWithRetry(tab)
+    const settings = getSettings()
+    const success = await activateTabWithRetry(tab, { selectedApps: settings.selectedApps })
     if (success && mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.hide()
     }
@@ -121,7 +214,11 @@ async function getApps() {
         .split('\n')
         .filter(line => line.trim() !== '')
 
-      const apps = appPaths.map(appPath => ({
+      // Filter out non-runnable system apps
+      const runnableAppPaths = appPaths.filter(appPath => isRunnableApp(appPath))
+      const filteredCount = appPaths.length - runnableAppPaths.length
+
+      const apps = runnableAppPaths.map(appPath => ({
         name: path.basename(appPath, '.app'),
         path: appPath,
         icon: null,
@@ -130,7 +227,7 @@ async function getApps() {
       // Update cache
       appsCache = apps
       appsCacheTimestamp = now
-      logger.log(`[ActionHandler] Cached ${apps.length} applications`)
+      logger.log(`[ActionHandler] Cached ${apps.length} applications (filtered out ${filteredCount} non-runnable apps)`)
       resolve(apps)
     })
   })
@@ -167,6 +264,50 @@ async function getAppIcon(_event, appPath) {
     logger.error('[ActionHandler] Error extracting icon:', error)
     return null
   }
+}
+
+/**
+ * Get app icon by name (searches for app path then extracts icon)
+ */
+async function getAppIconByName(_event, appName) {
+  if (!appName || typeof appName !== 'string') {
+    return null
+  }
+
+  // First, try to find the app path from the cached apps
+  if (appsCache) {
+    const app = appsCache.find(a =>
+      a.name.toLowerCase() === appName.toLowerCase() ||
+      a.path.toLowerCase().includes(appName.toLowerCase() + '.app')
+    )
+    if (app) {
+      return await getAppIcon(null, app.path)
+    }
+  }
+
+  // If not in cache, search for the app
+  return new Promise((resolve) => {
+    const searchName = appName.replace(/\.app$/, '')
+    execFile('mdfind', [`kMDItemKind == "Application" && kMDItemDisplayName == "${searchName}"`],
+      { timeout: 2000 },
+      (error, stdout) => {
+        if (error || !stdout) {
+          logger.log('[ActionHandler] App not found:', appName)
+          resolve(null)
+          return
+        }
+
+        const appPaths = stdout.split('\n').filter(line => line.trim() !== '')
+        if (appPaths.length === 0) {
+          resolve(null)
+          return
+        }
+
+        const appPath = appPaths[0]
+        resolve(getAppIcon(null, appPath))
+      }
+    )
+  })
 }
 
 /**
@@ -249,6 +390,7 @@ module.exports = {
   activateTab: activateTabHandler,
   getApps,
   getAppIcon,
+  getAppIconByName,
   openApp,
   openUrl,
   getSettings: getSettingsHandler,

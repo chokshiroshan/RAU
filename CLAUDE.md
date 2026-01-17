@@ -2,124 +2,100 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## ContextSearch
+## Project Overview
 
-A macOS launcher application (Spotlight alternative) built with Electron + React. Search and open applications, browser tabs, and files from a single unified interface.
+ContextSearch is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
 
 ## Development Commands
 
 ```bash
-# Build React frontend to dist/
-npm run build
+# Build and run (REQUIRED: build before start - Electron loads from dist/)
+npm run build          # Build React frontend to dist/
+npm start              # Run the Electron app
 
-# Build and run in development mode
-npm run dev
+# Development
+npm run dev            # Build and run in one command
+npm run dev:vite       # Vite dev server only (frontend iteration)
 
-# Start Vite dev server only (for iterative frontend work)
-npm run dev:vite
+# Testing
+npm test               # Core search tests (tests/search.test.js)
+npm run test:tabs      # Tab fetcher tests (tests/tabFetcher.test.js)
+npm run test:all       # All tests: node --test tests/*.test.js
 
-# Run the built Electron app
-npm start
-
-# Run tests
-npm test              # Search tests
-npm run test:tabs     # Tab fetcher tests
-npm run test:all      # All tests
+# Distribution
+npm run dist:mac       # Build distributable macOS app
 ```
 
-**Important:** Always run `npm run build` before `npm start`. The Electron main process loads from `dist/index.html`, not the Vite dev server.
+## Architecture
 
-## Architecture Overview
+### Process Model
+- **Main Process** (`electron/main.js`): Window management, global hotkey (Cmd+Shift+Space), IPC handlers
+- **Renderer Process** (`src/`): React UI with search interface
+- **Preload** (`electron/main-process/preload.js`): Secure IPC bridge with `contextIsolation: true`
 
-### Electron Main Process (`electron/main.js`)
-- Creates frameless, always-on-top window that appears on all macOS desktop spaces
-- Registers global hotkey (Cmd+Shift+Space) for toggling
-- Manages IPC handlers for all system operations
-- Uses `execFile()` (never `exec()`) to prevent shell injection
-- **Security:** `contextIsolation: true`, `nodeIntegration: false`
+### Key Data Flows
 
-### React Renderer Process (`src/`)
-- UI built with React + Tailwind CSS
-- Bundled by Vite to `dist/`
-- Accesses main process via `contextBridge` API exposed by `preload.js`
+**Search Flow:**
+1. User types in SearchBar → debounced query
+2. `unifiedSearch.js` orchestrates parallel searches: apps, tabs, files, commands
+3. Results combined and ranked with Fuse.js fuzzy matching
+4. Calculator expressions (`2+2`) and commands (`sleep`, `lock`) handled specially
 
-### Preload Script (`electron/preload.js`)
-- Bridges main process and renderer using `contextBridge`
-- Exposes safe, limited API via `window.electronAPI`
-- No direct Node.js access in renderer
+**Tab Fetching Flow:**
+1. `tabFetcher.js` executes AppleScripts in `src/scripts/*.applescript`
+2. Scripts enumerate browser tabs (Safari, Chrome, Brave, Arc, Comet, Terminal)
+3. Results cached with SWR pattern (10s cache, background refresh)
+4. Universal window discovery via `windowIndexer.js` for non-browser apps
 
-### Service Layer (`src/services/`)
-- `unifiedSearch.js` - Orchestrates fuzzy search across apps, files, and tabs using Fuse.js
-- `tabFetcher.js` - Fetches browser tabs via AppleScript (Safari, Chrome, Brave, Comet)
-- `fileSearch.js` - File search using macOS `mdfind`
-- `appSearch.js` - Application discovery via `mdfind`
-- `electron.js` - Bridge for renderer-to-main IPC (wraps `window.electronAPI`)
+**IPC Handler Registration:**
+- All handlers registered in `electron/main-process/handlers/index.js`
+- Handlers: `searchHandler`, `actionHandler`, `systemHandler`, `windowHandler`
 
-### Extracted Services (`electron/services/`)
-- `iconExtractor.js` - Extracts app icons from .app bundles using `sips`
+### Main Process Modules (`electron/main-process/modules/`)
+- `windowManager.js`: Frameless window, multi-monitor positioning
+- `hotkeyManager.js`: Global Cmd+Shift+Space registration
+- `settingsWindow.js`: Settings panel management
+- `errorHandler.js`: Global error recovery
 
-## Key macOS Integration Points
+### Renderer Services (`src/services/`)
+- `unifiedSearch.js`: Main search orchestrator with Fuse.js
+- `tabFetcher.js`: Browser tab discovery via AppleScript
+- `appSearch.js`: Application discovery via `mdfind`
+- `fileSearch.js`: File search via Spotlight/mdfind
+- `commandSearch.js`: System commands (sleep, lock, restart)
+- `windowIndexer.js`: Universal window discovery
 
-### Window Behavior
-- `app.setActivationPolicy('accessory')` - No Dock icon, background app
-- `window.setVisibleOnAllWorkspaces(true)` - Appears on all desktop spaces
-- `window.setAlwaysOnTop(true, 'pop-up-menu')` - Spotlight-like positioning
-- Window repositions to active screen on each show (multi-monitor support)
+## Security Requirements
 
-### Search Implementation
-- `mdfind` for file and app discovery (Spotlight index)
-- AppleScript for browser tab enumeration and activation
-- Fuse.js for fuzzy search with custom weights (name: 3.0, title: 2.0, url: 1.5, path: 1.0)
-- Parallel search across categories with 5-second timeout protection
-- Apps cache invalidates after 10 minutes (TTL)
+1. **Never use `exec()`** - Always `execFile()` with argument arrays
+2. **Validate all IPC input** - Use validators from `shared/validation/validators.js`:
+   - `validateFilePath()`, `validateAppPath()`, `validatePositiveInt()`, `validateUrlProtocol()`
+3. **Escape AppleScript strings** - Use `escapeAppleScriptString()` in tabFetcher.js
+4. **Context isolation** - Renderer has no direct Node.js access
 
-### IPC Communication
-- **Main process:** Uses `ipcMain.handle()` for request/response patterns
-- **Renderer process:** Uses `window.electronAPI` (exposed via `contextBridge`)
-- **Bridge:** `src/services/electron.js` provides backward-compatible `ipcRenderer` wrapper
-- Channel names centralized in `src/constants/ipc.js`
+## AppleScript Integration
 
-## Security Considerations
+Browser tab scripts follow this output format:
+```
+title|||url|||windowIndex|||tabIndex, title|||url|||windowIndex|||tabIndex, ...
+```
 
-- **`contextIsolation: true`, `nodeIntegration: false`** - Renderer cannot directly access Node.js APIs
-- **Always use `execFile()` instead of `exec()`** - Arguments passed as array, not shell string
-- **Escape AppleScript strings** - URLs embedded in AppleScript must have quotes/backslashes escaped
-- **Validate indices from AppleScript** - Window and tab indices should be positive integers
-- **Preload script only exposes necessary APIs** - No direct `ipcRenderer` access
+Adding a new browser:
+1. Create script in `src/scripts/[browser].applescript`
+2. Add fetch function in `tabFetcher.js` (e.g., `getSafariTabs()`)
+3. Add to `refreshTabs()` parallel fetch array
+4. Add activation case in `activateTab()` switch statement
 
-## Configuration Constants
+## Caching Strategy
 
-**Main process** (`electron/constants.js`):
-- Window dimensions (700x600, 80px from top)
-- Timeouts (mdfind: 10s, icon extraction: 10s, AppleScript: 5s)
-- Apps cache TTL (10 minutes)
-- Max icon cache size (100)
+- **Apps**: Pre-warmed on startup via `mdfind`
+- **Tabs**: 10-second SWR cache with background refresh
+- **Icons**: LRU cache (100 items) in iconExtractor.js
 
-**Renderer process** (`src/constants/config.js`):
-- Search thresholds (Fuse.js scoring)
-- Search debounce (150ms)
-- Max results (20)
+## Debugging
 
-## Error Handling Patterns
+```bash
+DEBUG=1 npm start    # Enable verbose logging
+```
 
-- Global error handlers show dialog and attempt recovery or quit cleanly (no zombies)
-- Window auto-recovery if render process crashes
-- Safe logging in `src/utils/logger.js` prevents EPIPE crashes
-- React Error Boundary in `src/components/ErrorBoundary.jsx` catches render errors
-
-## Window Management Pattern
-
-The window is created once and hidden/shown via `toggleWindow()`:
-
-1. **On app launch:** Window created hidden (`ready-to-show` event fires but window stays hidden)
-2. **On hotkey press:**
-   - If window exists: `show()` / `hide()`
-   - If window destroyed: Recreate via `createWindow()` Promise
-3. **No polling:** Uses `ready-to-show` event and Promise resolution instead of `setInterval`
-
-## Known Quirks
-
-- Tab activation via AppleScript can fail; app logs errors but continues gracefully
-- Icon extraction is slow; icons loaded on-demand with caching
-- Some browsers require accessibility permissions for AppleScript tab control
-- New apps installed while app is running won't appear until cache expires (10 min)
+Log prefixes: `[Window]`, `[IPC]`, `[TabFetcher]`, `[UnifiedSearch]`

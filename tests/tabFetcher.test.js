@@ -30,14 +30,13 @@ describe('Tab Fetcher Tests', () => {
     console.log('Test 2 passed: Tab objects have required properties')
   })
 
-  test('Browser property is valid (Safari, Chrome, Brave, or Comet)', async () => {
+  test('Browser property is valid app name', async () => {
     const tabs = await tabFetcher.getAllTabs()
 
-    const validBrowsers = ['Safari', 'Chrome', 'Brave', 'Comet']
     tabs.forEach(tab => {
       assert.ok(
-        validBrowsers.includes(tab.browser),
-        `Browser should be one of: ${validBrowsers.join(', ')}`
+        tab.browser && typeof tab.browser === 'string' && tab.browser.length > 0,
+        `Browser should be a valid app name: ${tab.browser}`
       )
     })
 
@@ -95,6 +94,16 @@ describe('Tab Fetcher Tests', () => {
     assert.strictEqual(match.windowIndex, 2)
     assert.strictEqual(match.tabIndex, 3)
     console.log('Test 6 passed: findMatchingTab prefers URL match')
+  })
+
+  test('isAppSelected respects selection and aliases', () => {
+    const selected = ['Google Chrome', 'Finder']
+
+    assert.strictEqual(tabFetcher.isAppSelected('Chrome', selected), true)
+    assert.strictEqual(tabFetcher.isAppSelected('Finder', selected), true)
+    assert.strictEqual(tabFetcher.isAppSelected('Brave', selected), false)
+    assert.strictEqual(tabFetcher.isAppSelected('Terminal', []), true)
+    console.log('Test 7 passed: isAppSelected handles aliases')
   })
 })
 

@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   activateTab: (tab) => ipcRenderer.invoke('activate-tab', tab),
   getApps: () => ipcRenderer.invoke('get-apps'),
   getAppIcon: (appPath) => ipcRenderer.invoke('get-app-icon', appPath),
+  getAppIconByName: (appName) => ipcRenderer.invoke('get-app-icon-by-name', appName),
   openApp: (appPath) => ipcRenderer.invoke('open-app', appPath),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),

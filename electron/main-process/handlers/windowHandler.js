@@ -5,6 +5,7 @@
 
 const { getSettings, saveSettings } = require('../config')
 const logger = require('../logger')
+const { WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_HEIGHT_COLLAPSED } = require('../constants')
 
 let mainWindow = null
 
@@ -17,12 +18,14 @@ function setMainWindow(window) {
 
 /**
  * Resize window based on content
+ * CSS handles visual transitions, this updates window bounds for click-through behavior
  */
 function resizeWindow(_event, height) {
   if (!mainWindow || mainWindow.isDestroyed()) return false
   // Clamp between collapsed and max
-  const targetHeight = Math.max(62, Math.min(height, 700))
-  mainWindow.setSize(700, targetHeight)
+  const targetHeight = Math.max(WINDOW_HEIGHT_COLLAPSED, Math.min(height, WINDOW_HEIGHT))
+  // Use false to prevent Electron's resize animation - CSS handles the visual transition
+  mainWindow.setSize(WINDOW_WIDTH, targetHeight, false)
   return true
 }
 
@@ -45,7 +48,7 @@ function markOnboardingComplete() {
   logger.log('[WindowHandler] Onboarding marked complete')
   // Collapse window to search bar size
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setSize(700, 62)
+    mainWindow.setSize(WINDOW_WIDTH, WINDOW_HEIGHT_COLLAPSED)
   }
   return true
 }

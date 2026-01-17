@@ -32,10 +32,18 @@ function App() {
   })
   const searchTimeoutRef = useRef(null)
   const inputRef = useRef(null)
+  const resultsContainerRef = useRef(null)
   const hasQuery = query.trim().length > 0
+  const [isExiting, setIsExiting] = useState(false)
+  const [windowHeight, setWindowHeight] = useState(62) // Collapsed by default
 
-  // No more IPC resize calls needed - window is fixed size
-  // CSS handles content sizing and animations
+  // Keep window fully expanded during onboarding so content isn't clipped
+  useEffect(() => {
+    if (!showOnboarding || !ipcRenderer) return
+    ipcRenderer.invoke('resize-window', 700).catch(err => {
+      console.error('Failed to resize window for onboarding:', err)
+    })
+  }, [showOnboarding])
 
   // Focus input when window is shown
   useEffect(() => {
@@ -106,16 +114,65 @@ function App() {
     }
   }, [query, filters, performSearch])
 
+  // Dynamic window height calculation
+  useEffect(() => {
+    if (showOnboarding) return
+    const calculateHeight = () => {
+      const searchBarHeight = 52 // Fixed height
+      const padding = 24 // Top + bottom padding
+      const gap = 12 // Gap between search bar and results
+
+      if (!hasQuery || results.length === 0) {
+        return searchBarHeight + padding
+      }
+
+      // Get actual results container height
+      const resultsHeight = resultsContainerRef.current?.scrollHeight || 0
+      const totalHeight = Math.min(
+        searchBarHeight + gap + resultsHeight + padding,
+        700 // Max window height
+      )
+
+      return totalHeight
+    }
+
+    const newHeight = calculateHeight()
+    setWindowHeight(newHeight)
+
+    // Debounced IPC call to Electron for window bounds
+    const timeoutId = setTimeout(() => {
+      if (ipcRenderer) {
+        ipcRenderer.invoke('resize-window', newHeight).catch(err => {
+          console.error('Failed to resize window:', err)
+        })
+      }
+    }, 50) // 50ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [results, hasQuery, showOnboarding])
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
-        setSelectedIndex(prev => Math.min(prev + 1, results.length - 1))
+        setSelectedIndex(prev => {
+          const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
+          if (results.length === 0) return 0
+          const nextIndex = Math.min(safePrev + 1, results.length - 1)
+          console.log('[Nav] ArrowDown:', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
+          return nextIndex
+        })
         break
       case 'ArrowUp':
         e.preventDefault()
-        setSelectedIndex(prev => Math.max(prev - 1, 0))
+        setSelectedIndex(prev => {
+          const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
+          if (results.length === 0) return 0
+          const nextIndex = Math.max(safePrev - 1, 0)
+          console.log('[Nav] ArrowUp:', { from: safePrev, to: nextIndex, totalResults: results.length, resultType: results[nextIndex]?.type })
+          return nextIndex
+        })
         break
       case 'Enter':
         e.preventDefault()
@@ -161,7 +218,7 @@ function App() {
                 console.error('Failed to open app:', err)
               })
             }
-          } else if (result.type === 'tab' || result.type === 'history-tab') {
+          } else if (result.type === 'tab' || result.type === 'history-tab' || result.type === 'window') {
             if (ipcRenderer) {
               ipcRenderer.invoke('activate-tab', result).catch(err => {
                 console.error('Failed to activate tab:', err)
@@ -178,8 +235,12 @@ function App() {
         break
       case 'Escape':
         e.preventDefault()
-        // Hide the window
-        if (ipcRenderer) ipcRenderer.send('hide-window')
+        // Trigger exit animation before hiding
+        setIsExiting(true)
+        setTimeout(() => {
+          if (ipcRenderer) ipcRenderer.send('hide-window')
+          setIsExiting(false)
+        }, 150) // Match --duration-exit
         break
       default:
         break
@@ -197,7 +258,7 @@ function App() {
             console.error('Failed to open app:', err)
           })
         }
-      } else if (result.type === 'tab') {
+      } else if (result.type === 'tab' || result.type === 'window') {
         if (ipcRenderer) {
           ipcRenderer.invoke('activate-tab', result).catch(err => {
             console.error('Failed to activate tab:', err)
@@ -239,8 +300,8 @@ function App() {
 
   return (
     <div
-      className="app-container"
-      onKeyDown={handleKeyDown}
+      className={`app-container ${isExiting ? 'exiting' : ''}`}
+      onKeyDownCapture={handleKeyDown}
     >
       <div className="search-window">
         {/* Top Row: Search Pill + Filter Bubbles */}
@@ -266,7 +327,7 @@ function App() {
 
         {/* Detached Results List */}
         {hasQuery && (
-          <div className="results-container">
+          <div className="results-container" ref={resultsContainerRef}>
             <ResultsList
               results={results}
               selectedIndex={selectedIndex}

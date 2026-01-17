@@ -21,7 +21,8 @@ const DEFAULT_SETTINGS = {
   searchApps: true,
   searchTabs: true,
   searchFiles: true,
-  onboardingComplete: false
+  onboardingComplete: false,
+  selectedApps: []
 }
 
 /**

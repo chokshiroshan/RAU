@@ -176,8 +176,8 @@ export async function searchUnified(query, filters) {
     // Add type indicator to tab results with priority boost
     const tabsWithType = tabs.map(tab => ({
       ...tab,
-      type: 'tab',
-      name: tab.title,
+      type: tab.type || 'tab',
+      name: tab.title || tab.name,
       priority: 2, // Medium priority
     }))
 

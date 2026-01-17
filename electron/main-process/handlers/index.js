@@ -27,6 +27,7 @@ function registerHandlers(mainWindow) {
   ipcMain.handle('activate-tab', actionHandlers.activateTab)
   ipcMain.handle('get-apps', actionHandlers.getApps)
   ipcMain.handle('get-app-icon', actionHandlers.getAppIcon)
+  ipcMain.handle('get-app-icon-by-name', actionHandlers.getAppIconByName)
   ipcMain.handle('open-app', actionHandlers.openApp)
   ipcMain.handle('open-url', actionHandlers.openUrl)
   ipcMain.handle('get-settings', actionHandlers.getSettings)

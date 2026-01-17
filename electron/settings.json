@@ -2,5 +2,6 @@
   "searchApps": true,
   "searchTabs": true,
   "searchFiles": true,
-  "onboardingComplete": false
+  "onboardingComplete": true,
+  "selectedApps": []
 }
