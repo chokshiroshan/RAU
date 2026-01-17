@@ -81,11 +81,8 @@ function GroupHeader({ appName, category, itemCount, isExpanded, onToggle, icon,
   return (
     <div
       ref={headerRef}
-      className="group-header"
+      className={`group-header ${isExpanded ? 'expanded' : 'collapsed'}`}
       onClick={onToggle}
-      style={{
-        background: isExpanded ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.03)'
-      }}
     >
       <div className="group-header-left">
         <div className="group-app-icon">
@@ -115,7 +112,7 @@ function GroupHeader({ appName, category, itemCount, isExpanded, onToggle, icon,
             className="group-category-badge"
             style={{
               background: getCategoryColor(category),
-              border: `1px solid ${getCategoryBorderColor(category)}`,
+              border: `0.0625rem solid ${getCategoryBorderColor(category)}`,
               color: getCategoryTextColor(category)
             }}
           >

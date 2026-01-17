@@ -4,8 +4,8 @@
  */
 
 // Window dimensions
-const WINDOW_WIDTH = 700
-const WINDOW_HEIGHT = 700
+const WINDOW_WIDTH = 1000
+const WINDOW_HEIGHT = 1000
 const WINDOW_HEIGHT_COLLAPSED = 62 // Just the search bar (no results)
 const WINDOW_TOP_OFFSET = 80 // Distance from top of screen (like Spotlight)
 

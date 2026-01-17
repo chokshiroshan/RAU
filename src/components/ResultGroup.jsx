@@ -34,7 +34,7 @@ function ResultGroup({ group, selectedIndex, onSelect, onHover, groupIndex, flat
         icon={group.icon}
         result={group.items[0]}
       />
-        {isExpanded && (
+      {isExpanded && (
         <div className="group-items">
           {group.items.map((item, index) => {
             const itemFlatIndex = flatIndex + index
@@ -55,7 +55,7 @@ function ResultGroup({ group, selectedIndex, onSelect, onHover, groupIndex, flat
                 className={`result-item ${isSelected ? 'selected' : ''} ${item.type}-result`}
                 onClick={() => onSelect(itemFlatIndex)}
                 onMouseEnter={() => onHover(itemFlatIndex)}
-                style={{ paddingLeft: '24px', '--stagger-index': itemFlatIndex }}
+                style={{ paddingLeft: '1.5rem', '--stagger-index': itemFlatIndex }}
               >
                 <div className="result-icon">
                   {item.type === 'command' ? (

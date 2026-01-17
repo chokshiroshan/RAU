@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import SearchBar from './components/SearchBar'
 import ResultsList from './components/ResultsList'
 import Onboarding from './components/Onboarding'
+import Settings from './components/Settings'
 import { searchUnified } from './services/unifiedSearch'
 import { ipcRenderer } from './services/electron'
 import { getHistory, addToHistory } from './services/historyService'
@@ -9,7 +10,7 @@ import { getHistory, addToHistory } from './services/historyService'
 const ONBOARDING_KEY = 'context-search-onboarding-complete'
 
 // ⚠️ DEBUG: Set to true to reset onboarding on next load
-const DEBUG_RESET_ONBOARDING = true
+const DEBUG_RESET_ONBOARDING = false
 if (DEBUG_RESET_ONBOARDING) {
   localStorage.removeItem(ONBOARDING_KEY)
 }
@@ -20,9 +21,7 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem(ONBOARDING_KEY)
-  })
+  const [showOnboarding, setShowOnboarding] = useState(false)
   // Filter states - must be declared before any early returns
   const [filters, setFilters] = useState({
     apps: true,
@@ -36,6 +35,7 @@ function App() {
   const hasQuery = query.trim().length > 0
   const [isExiting, setIsExiting] = useState(false)
   const [windowHeight, setWindowHeight] = useState(62) // Collapsed by default
+  const [showSettings, setShowSettings] = useState(false)
 
   // Keep window fully expanded during onboarding so content isn't clipped
   useEffect(() => {
@@ -114,42 +114,34 @@ function App() {
     }
   }, [query, filters, performSearch])
 
-  // Dynamic window height calculation
+  // Close settings when query changes
+  useEffect(() => {
+    if (hasQuery && showSettings) {
+      setShowSettings(false)
+    }
+  }, [hasQuery, showSettings])
+
+  // Dynamic window height calculation - use fixed heights to avoid race conditions
   useEffect(() => {
     if (showOnboarding) return
-    const calculateHeight = () => {
-      const searchBarHeight = 52 // Fixed height
-      const padding = 24 // Top + bottom padding
-      const gap = 12 // Gap between search bar and results
 
-      if (!hasQuery || results.length === 0) {
-        return searchBarHeight + padding
-      }
+    // Simple fixed heights: collapsed or expanded
+    const COLLAPSED_HEIGHT = 92 // Search bar + padding + buffer
+    const EXPANDED_HEIGHT = 700 // Fixed height when showing results or settings
 
-      // Get actual results container height
-      const resultsHeight = resultsContainerRef.current?.scrollHeight || 0
-      const totalHeight = Math.min(
-        searchBarHeight + gap + resultsHeight + padding,
-        700 // Max window height
-      )
+    const hasResults = hasQuery && (isLoading || results.length > 0)
+    const needsExpanded = hasResults || showSettings
+    const newHeight = needsExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT
 
-      return totalHeight
-    }
-
-    const newHeight = calculateHeight()
     setWindowHeight(newHeight)
 
-    // Debounced IPC call to Electron for window bounds
-    const timeoutId = setTimeout(() => {
-      if (ipcRenderer) {
-        ipcRenderer.invoke('resize-window', newHeight).catch(err => {
-          console.error('Failed to resize window:', err)
-        })
-      }
-    }, 50) // 50ms debounce
-
-    return () => clearTimeout(timeoutId)
-  }, [results, hasQuery, showOnboarding])
+    // Update Electron window size
+    if (ipcRenderer) {
+      ipcRenderer.invoke('resize-window', newHeight).catch(err => {
+        console.error('Failed to resize window:', err)
+      })
+    }
+  }, [results.length, hasQuery, isLoading, showOnboarding, showSettings])
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
@@ -305,7 +297,7 @@ function App() {
     >
       <div className="search-window">
         {/* Top Row: Search Pill + Filter Bubbles */}
-        <div className="search-row">
+        <div className={`search-row ${hasQuery ? 'has-query' : ''}`}>
           <SearchBar
             ref={inputRef}
             value={query}
@@ -314,10 +306,10 @@ function App() {
             hasResults={hasQuery && results.length > 0}
           />
 
-          <div className="filter-bubbles">
+          <div className={`filter-bubbles ${hasQuery ? 'hidden' : ''}`}>
             <button
-              className="filter-bubble"
-              onClick={() => {/* Open settings */ }}
+              className={`filter-bubble ${showSettings ? 'active' : ''}`}
+              onClick={() => setShowSettings(!showSettings)}
               title="Settings"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -325,8 +317,15 @@ function App() {
           </div>
         </div>
 
-        {/* Detached Results List */}
-        {hasQuery && (
+        {/* Inline Settings Panel - replaces results when open */}
+        {showSettings && (
+          <div className="results-container">
+            <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+          </div>
+        )}
+
+        {/* Detached Results List - hidden when settings is open */}
+        {!showSettings && hasQuery && (isLoading || results.length > 0) && (
           <div className="results-container" ref={resultsContainerRef}>
             <ResultsList
               results={results}

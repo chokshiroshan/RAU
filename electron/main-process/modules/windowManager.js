@@ -6,7 +6,7 @@
 const { app, BrowserWindow, screen } = require('electron')
 const path = require('path')
 const logger = require('../logger')
-const { WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TOP_OFFSET } = require('../constants')
+const { WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_HEIGHT_COLLAPSED, WINDOW_TOP_OFFSET } = require('../constants')
 
 // Window state
 let mainWindow = null
@@ -74,7 +74,7 @@ function createWindow() {
     // Transparent frameless window - content floats with its own background
     mainWindow = new BrowserWindow({
       width: WINDOW_WIDTH,
-      height: WINDOW_HEIGHT,
+      height: WINDOW_HEIGHT_COLLAPSED,
       x,
       y,
       frame: false,
@@ -144,11 +144,17 @@ function createWindow() {
       reject(new Error(`Failed to load: ${errorDescription}`))
     })
 
-    // Hide window when it loses focus
+    // Hide window when it loses focus (but not if settings window is open)
     let blurTimeout
+    const settingsWindow = require('./settingsWindow')
     mainWindow.on('blur', () => {
       if (blurTimeout) clearTimeout(blurTimeout)
       blurTimeout = setTimeout(() => {
+        // Don't hide if settings window is open and focused
+        const sw = settingsWindow.getSettingsWindow()
+        if (sw && !sw.isDestroyed() && sw.isFocused()) {
+          return
+        }
         if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
           mainWindow.hide()
         }
@@ -161,6 +167,11 @@ function createWindow() {
       mainWindow = null
       windowReadyPromise = null
     })
+
+    // Enable dev tools in development
+    if (process.env.NODE_ENV === 'development') {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+    }
   })
 
   return windowReadyPromise

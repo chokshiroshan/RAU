@@ -5,7 +5,7 @@
 
 // Window dimensions
 export const WINDOW_WIDTH = 700
-export const WINDOW_HEIGHT = 600
+export const WINDOW_HEIGHT = 700
 export const WINDOW_TOP_OFFSET = 80 // Distance from top of screen (like Spotlight)
 
 // Search settings

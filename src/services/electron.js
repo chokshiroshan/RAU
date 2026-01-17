@@ -66,6 +66,7 @@ export const ipcRenderer = {
       'execute-command': 'executeCommand',
       'open-url': 'openUrl',
       'mark-onboarding-complete': 'markOnboardingComplete',
+      'show-settings': 'showSettings',
     }
     const method = methodMap[channel]
     if (!method) {

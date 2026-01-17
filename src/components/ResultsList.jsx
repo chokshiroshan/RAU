@@ -7,7 +7,6 @@ const pendingIconRequests = new Set()
 
 function ResultsList({ results, selectedIndex, onSelect, onHover }) {
   const listRef = useRef(null)
-  const selectedRef = useRef(null)
   const [icons, setIcons] = useState(new Map())
   const [appIcons, setAppIcons] = useState(new Map())
 
@@ -112,38 +111,23 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     return null
   }, [results, selectedIndex])
 
-  // Find which element should be scrolled into view
-  const getScrollElementIndex = useCallback(() => {
-    if (!selectedResult) return null
-
-    // Check if it's an app result
-    if (selectedResult.type === 'app') {
-      const index = appResults.findIndex(app => app === selectedResult)
-      if (index !== -1) {
-        return { isApp: true, index }
-      }
-    }
-
-    // Check if it's in a group
-    for (const group of groupedTabWindowResults) {
-      const itemIndex = group.items.findIndex(item =>
-        item === selectedResult
-      )
-      if (itemIndex !== -1) {
-        return { isApp: false, groupIndex: group.groupStartIndex, itemIndex }
-      }
-    }
-    return null
-  }, [selectedResult, appResults, groupedTabWindowResults])
-
   // Scroll selected item into view
   useEffect(() => {
-    if (selectedRef.current && listRef.current) {
-      selectedRef.current.scrollIntoView({
-        behavior: 'smooth',
+    const listEl = listRef.current
+    if (!listEl) return
+
+    // Wait for DOM to reflect the new selected state (important for nested group items)
+    const rafId = requestAnimationFrame(() => {
+      const selectedEl = listEl.querySelector('.result-item.selected')
+      if (!selectedEl) return
+
+      selectedEl.scrollIntoView({
         block: 'nearest',
+        inline: 'nearest',
       })
-    }
+    })
+
+    return () => cancelAnimationFrame(rafId)
   }, [selectedIndex])
 
   // Load icons for app results on-demand with deduplication and batch loading
@@ -230,7 +214,6 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
           return (
             <div
               key={app.path}
-              ref={isSelected ? selectedRef : null}
               className={`result-item app-result ${isSelected ? 'selected' : ''}`}
               style={{ '--stagger-index': displayIndex }}
               onClick={() => onSelect(index)}

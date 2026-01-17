@@ -54,6 +54,22 @@ function createAppMenu() {
       ]
     },
     {
+      label: 'Development',
+      submenu: [
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'Command+Option+I',
+          click: () => {
+            const { BrowserWindow } = require('electron')
+            const win = BrowserWindow.getFocusedWindow()
+            if (win) {
+              win.webContents.toggleDevTools()
+            }
+          }
+        }
+      ]
+    },
+    {
       label: 'Help',
       submenu: [
         {

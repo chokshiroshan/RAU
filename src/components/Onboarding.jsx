@@ -187,123 +187,127 @@ function Onboarding({ onComplete }) {
                     Skip
                 </button>
 
-                {/* Slide content */}
-                <div className={`onboarding-slide ${animating ? 'animating' : ''}`}>
-                    <div className="onboarding-icon">{slide.icon}</div>
-                    <h1 className="onboarding-title">{slide.title}</h1>
-                    <p className="onboarding-subtitle">{slide.subtitle}</p>
+                <div className="onboarding-layout">
+                    <div className="onboarding-content-panel">
+                        {/* Slide content */}
+                        <div className={`onboarding-slide ${animating ? 'animating' : ''}`}>
+                            <div className="onboarding-icon">{slide.icon}</div>
+                            <h1 className="onboarding-title">{slide.title}</h1>
+                            <p className="onboarding-subtitle">{slide.subtitle}</p>
 
-                    {slide.id === 'app-selection' && (
-                        <div className="onboarding-apps">
-                            <div className="onboarding-apps-toolbar">
-                                <input
-                                    className="onboarding-apps-filter"
-                                    type="text"
-                                    value={appFilter}
-                                    onChange={(e) => setAppFilter(e.target.value)}
-                                    placeholder="Filter apps"
-                                />
-                                <button
-                                    className="onboarding-apps-btn"
-                                    onClick={selectAllApps}
-                                >
-                                    Select all
-                                </button>
-                                <button
-                                    className="onboarding-apps-btn secondary"
-                                    onClick={clearAllApps}
-                                >
-                                    Clear
-                                </button>
-                            </div>
-                            <div className="onboarding-apps-list">
-                                {!ipcRenderer && (
-                                    <div className="onboarding-apps-empty">
-                                        App selection is unavailable outside Electron.
-                                    </div>
-                                )}
-                                {ipcRenderer && isLoadingApps && (
-                                    <div className="onboarding-apps-loading">
-                                        Loading apps...
-                                    </div>
-                                )}
-                                {ipcRenderer && !isLoadingApps && filteredApps.length === 0 && (
-                                    <div className="onboarding-apps-empty">
-                                        No apps match your filter.
-                                    </div>
-                                )}
-                                {ipcRenderer && !isLoadingApps && filteredApps.map(appName => (
-                                    <label key={appName} className="onboarding-apps-item">
+                            {slide.id === 'app-selection' && (
+                                <div className="onboarding-apps">
+                                    <div className="onboarding-apps-toolbar">
                                         <input
-                                            type="checkbox"
-                                            checked={selectedApps.includes(appName)}
-                                            onChange={() => toggleApp(appName)}
+                                            className="onboarding-apps-filter"
+                                            type="text"
+                                            value={appFilter}
+                                            onChange={(e) => setAppFilter(e.target.value)}
+                                            placeholder="Filter apps"
                                         />
-                                        <span className="onboarding-apps-name">{appName}</span>
-                                    </label>
-                                ))}
-                            </div>
-                            <div className="onboarding-apps-hint">
-                                We will show tabs and windows only for selected apps.
-                            </div>
-                        </div>
-                    )}
-
-                    {slide.content && slide.id !== 'app-selection' && (
-                        <p className="onboarding-content">{slide.content}</p>
-                    )}
-
-                    {slide.hotkey && (
-                        <div className="onboarding-hotkey">
-                            <span className="hotkey-keys">{slide.hotkey}</span>
-                            {slide.hotkeyDescription && (
-                                <span className="hotkey-desc">{slide.hotkeyDescription}</span>
-                            )}
-                        </div>
-                    )}
-
-                    {slide.features && slide.id !== 'app-selection' && (
-                        <div className="onboarding-features">
-                            {slide.features.map((feature, i) => (
-                                <div key={i} className="onboarding-feature">
-                                    <span className="feature-icon">{feature.icon}</span>
-                                    <div className="feature-text">
-                                        <span className="feature-label">{feature.label}</span>
-                                        <span className="feature-desc">{feature.desc}</span>
+                                        <button
+                                            className="onboarding-apps-btn"
+                                            onClick={selectAllApps}
+                                        >
+                                            Select all
+                                        </button>
+                                        <button
+                                            className="onboarding-apps-btn secondary"
+                                            onClick={clearAllApps}
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                    <div className="onboarding-apps-list">
+                                        {!ipcRenderer && (
+                                            <div className="onboarding-apps-empty">
+                                                App selection is unavailable outside Electron.
+                                            </div>
+                                        )}
+                                        {ipcRenderer && isLoadingApps && (
+                                            <div className="onboarding-apps-loading">
+                                                Loading apps...
+                                            </div>
+                                        )}
+                                        {ipcRenderer && !isLoadingApps && filteredApps.length === 0 && (
+                                            <div className="onboarding-apps-empty">
+                                                No apps match your filter.
+                                            </div>
+                                        )}
+                                        {ipcRenderer && !isLoadingApps && filteredApps.map(appName => (
+                                            <label key={appName} className="onboarding-apps-item">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedApps.includes(appName)}
+                                                    onChange={() => toggleApp(appName)}
+                                                />
+                                                <span className="onboarding-apps-name">{appName}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="onboarding-apps-hint">
+                                        We will show tabs and windows only for selected apps.
                                     </div>
                                 </div>
+                            )}
+
+                            {slide.content && slide.id !== 'app-selection' && (
+                                <p className="onboarding-content">{slide.content}</p>
+                            )}
+
+                            {slide.hotkey && (
+                                <div className="onboarding-hotkey">
+                                    <span className="hotkey-keys">{slide.hotkey}</span>
+                                    {slide.hotkeyDescription && (
+                                        <span className="hotkey-desc">{slide.hotkeyDescription}</span>
+                                    )}
+                                </div>
+                            )}
+
+                            {slide.features && slide.id !== 'app-selection' && (
+                                <div className="onboarding-features">
+                                    {slide.features.map((feature, i) => (
+                                        <div key={i} className="onboarding-feature">
+                                            <span className="feature-icon">{feature.icon}</span>
+                                            <div className="feature-text">
+                                                <span className="feature-label">{feature.label}</span>
+                                                <span className="feature-desc">{feature.desc}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Navigation dots */}
+                        <div className="onboarding-dots">
+                            {SLIDES.map((_, i) => (
+                                <button
+                                    key={i}
+                                    className={`onboarding-dot ${i === currentSlide ? 'active' : ''}`}
+                                    onClick={() => goToSlide(i)}
+                                    aria-label={`Go to slide ${i + 1}`}
+                                />
                             ))}
                         </div>
-                    )}
-                </div>
 
-                {/* Navigation dots */}
-                <div className="onboarding-dots">
-                    {SLIDES.map((_, i) => (
-                        <button
-                            key={i}
-                            className={`onboarding-dot ${i === currentSlide ? 'active' : ''}`}
-                            onClick={() => goToSlide(i)}
-                            aria-label={`Go to slide ${i + 1}`}
-                        />
-                    ))}
-                </div>
-
-                {/* Navigation buttons */}
-                <div className="onboarding-nav">
-                    <button
-                        className="onboarding-btn secondary"
-                        onClick={handleBack}
-                        disabled={isFirst}
-                    >
-                        Back
-                    </button>
-                    <button
-                        className="onboarding-btn primary"
-                        onClick={handleNext}
-                    >
-                        {isLast ? 'Get Started' : 'Next'}
-                    </button>
+                        {/* Navigation buttons */}
+                        <div className="onboarding-nav">
+                            <button
+                                className="onboarding-btn secondary"
+                                onClick={handleBack}
+                                disabled={isFirst}
+                            >
+                                Back
+                            </button>
+                            <button
+                                className="onboarding-btn primary"
+                                onClick={handleNext}
+                            >
+                                {isLast ? 'Get Started' : 'Next'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

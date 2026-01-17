@@ -45,6 +45,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Onboarding state
   markOnboardingComplete: () => ipcRenderer.invoke('mark-onboarding-complete'),
+
+  // Settings
+  showSettings: () => ipcRenderer.invoke('show-settings'),
 })
 
 // Log when preload script is loaded

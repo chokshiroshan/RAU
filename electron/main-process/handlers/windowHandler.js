@@ -20,8 +20,19 @@ function setMainWindow(window) {
  * Resize window based on content
  * CSS handles visual transitions, this updates window bounds for click-through behavior
  */
-function resizeWindow(_event, height) {
+function resizeWindow(_event, heightInput) {
   if (!mainWindow || mainWindow.isDestroyed()) return false
+
+  const height = typeof heightInput === 'number'
+    ? heightInput
+    : typeof heightInput === 'object' && heightInput !== null
+      ? heightInput.height
+      : null
+
+  if (!Number.isFinite(height)) {
+    return false
+  }
+
   // Clamp between collapsed and max
   const targetHeight = Math.max(WINDOW_HEIGHT_COLLAPSED, Math.min(height, WINDOW_HEIGHT))
   // Use false to prevent Electron's resize animation - CSS handles the visual transition

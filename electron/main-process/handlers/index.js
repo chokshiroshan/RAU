@@ -8,6 +8,7 @@ const searchHandlers = require('./searchHandler')
 const actionHandlers = require('./actionHandler')
 const systemHandlers = require('./systemHandler')
 const windowHandlers = require('./windowHandler')
+const settingsWindow = require('../modules/settingsWindow')
 
 /**
  * Register all IPC handlers
@@ -17,6 +18,7 @@ function registerHandlers(mainWindow) {
   windowHandlers.setMainWindow(mainWindow)
   actionHandlers.setMainWindow(mainWindow)
   systemHandlers.setMainWindow(mainWindow)
+  settingsWindow.setGetMainWindowCallback(() => mainWindow)
 
   // Search handlers
   ipcMain.handle('search-files', searchHandlers.searchFiles)
@@ -41,6 +43,12 @@ function registerHandlers(mainWindow) {
   ipcMain.handle('mark-onboarding-complete', windowHandlers.markOnboardingComplete)
   ipcMain.on('hide-window', windowHandlers.hideWindow)
   ipcMain.on('renderer-ready', windowHandlers.rendererReady)
+
+  // Settings window
+  ipcMain.handle('show-settings', () => {
+    settingsWindow.openSettingsWindow()
+    return true
+  })
 }
 
 module.exports = {
