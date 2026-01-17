@@ -19,11 +19,13 @@
   --text-tertiary: rgba(255, 255, 255, 0.40);
   --text-quaternary: rgba(255, 255, 255, 0.25);
 
-  /* Accent */
-  --accent: #3B82F6;
-  --accent-muted: rgba(59, 130, 246, 0.15);
-  --accent-gradient: linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%);
-  --accent-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+  /* Accent - Violet to Magenta Gradient */
+  --accent-primary: #8B5CF6;
+  --accent-secondary: #EC4899;
+  --accent: #8B5CF6;
+  --accent-muted: rgba(139, 92, 246, 0.15);
+  --accent-gradient: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 50%, var(--accent-primary) 100%);
+  --accent-glow: 0 0 20px rgba(139, 92, 246, 0.3);
 
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.06);
@@ -85,12 +87,12 @@
     rgba(255, 255, 255, 0.05) 50%, 
     rgba(255, 255, 255, 0.02) 100%);
   --glass-gradient-accent: linear-gradient(135deg, 
-    rgba(59, 130, 246, 0.15) 0%, 
-    rgba(147, 51, 234, 0.1) 50%, 
-    rgba(59, 130, 246, 0.05) 100%);
+    rgba(139, 92, 246, 0.15) 0%, 
+    rgba(236, 72, 153, 0.1) 50%, 
+    rgba(139, 92, 246, 0.05) 100%);
   --glass-gradient-active: linear-gradient(135deg, 
-    rgba(59, 130, 246, 0.25) 0%, 
-    rgba(147, 51, 234, 0.2) 100%);
+    rgba(139, 92, 246, 0.25) 0%, 
+    rgba(236, 72, 153, 0.2) 100%);
   
   /* Glass Shadows */
   --glass-shadow-light: 
@@ -1510,4 +1512,193 @@ html {
 
 .onboarding-btn.primary:active {
   transform: translateY(0) scale(0.98);
+}
+
+/* =====================================================
+   GLASS PARTICLE SYSTEM & ANIMATIONS
+   ===================================================== */
+
+.glass-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.glass-particle {
+  position: absolute;
+  background: var(--particle-color);
+  border-radius: 50%;
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: particleFloat 10s infinite ease-in-out;
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0.4;
+  }
+  25% {
+    transform: translateY(-30px) translateX(15px) scale(1.1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) translateX(-10px) scale(0.9);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translateY(-40px) translateX(20px) scale(1.05);
+    opacity: 0.5;
+  }
+}
+
+.glass-particle:nth-child(odd) {
+  animation-duration: 12s;
+  animation-delay: 0s;
+}
+
+.glass-particle:nth-child(even) {
+  animation-duration: 15s;
+  animation-delay: 2s;
+}
+
+.glass-particle:nth-child(3n) {
+  animation-duration: 18s;
+  animation-delay: 4s;
+}
+
+/* Glass Morph Animations */
+@keyframes glassMorphIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.02) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+  }
+}
+
+@keyframes glassMorphOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    backdrop-filter: var(--blur-medium);
+    -webkit-backdrop-filter: var(--blur-medium);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+/* Enhanced Glass Panels */
+.glass-panel {
+  background: var(--glass-gradient-subtle);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  box-shadow: var(--glass-shadow-medium);
+  transition: all var(--duration-fast) var(--glass-ease-smooth);
+  animation: glassMorphIn var(--glass-duration-smooth) var(--glass-ease-smooth);
+}
+
+.glass-panel:hover {
+  background: var(--glass-surface-hover);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: var(--glass-shadow-heavy);
+}
+
+/* Glass Button Enhanced */
+.glass-button {
+  background: var(--glass-gradient-accent);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: var(--blur-light);
+  -webkit-backdrop-filter: var(--blur-light);
+  transition: all var(--duration-fast) var(--glass-ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent);
+  transition: left var(--glass-duration-quick) var(--glass-ease-smooth);
+}
+
+.glass-button:hover::before {
+  left: 100%;
+}
+
+.glass-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--glass-shadow-heavy);
+  background: var(--glass-gradient-active);
+}
+
+/* Glass Card Component */
+.glass-card {
+  background: var(--glass-surface);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  backdrop-filter: var(--blur-medium);
+  -webkit-backdrop-filter: var(--blur-medium);
+  box-shadow: var(--glass-shadow-light);
+  transition: all var(--duration-fast) var(--glass-ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity var(--glass-duration-quick) var(--glass-ease-smooth);
+  pointer-events: none;
+}
+
+.glass-card:hover::after {
+  opacity: 1;
+}
+
+.glass-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--glass-shadow-medium);
+  background: var(--glass-surface-hover);
 }
