@@ -1,5 +1,5 @@
 /**
- * Universal Window Indexer for ContextSearch
+ * Universal Window Indexer for RAU
  * Provides fast, comprehensive window discovery across all macOS applications
  * Uses Core Graphics APIs for fast enumeration with AppleScript for detailed data
  */
@@ -25,23 +25,23 @@ const APP_CAPABILITIES = {
   'Brave Browser': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Arc': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Comet': { category: 'browsers', tabs: true, documents: false, paths: true },
-  
+
   // Terminals - tab support, no documents
   'Terminal': { category: 'terminals', tabs: true, documents: false, paths: true },
   'iTerm2': { category: 'terminals', tabs: true, documents: false, paths: true },
-  
+
   // Editors - tab + document support
   'VS Code': { category: 'editors', tabs: true, documents: true, paths: true },
   'Visual Studio Code': { category: 'editors', tabs: true, documents: true, paths: true },
   'Sublime Text': { category: 'editors', tabs: true, documents: true, paths: true },
   'TextEdit': { category: 'editors', tabs: false, documents: true, paths: true },
-  
+
   // Productivity apps - document focused
   'Pages': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Keynote': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Numbers': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Preview': { category: 'productivity', tabs: true, documents: true, paths: true },
-  
+
   // System utilities - basic window info
   'Finder': { category: 'system', tabs: true, documents: false, paths: true },
   'System Preferences': { category: 'system', tabs: false, documents: false, paths: false },
@@ -61,7 +61,7 @@ function executeWindowDiscoveryScript() {
   return new Promise((resolve) => {
     // For now, use a fallback approach until AppleScript permissions are resolved
     // This simulates universal window discovery using app enumeration
-    
+
     // Get running applications first
     execFile('osascript', ['-e', 'tell application "System Events" to get name of every application process'], { timeout: 3000 }, (error, stdout, stderr) => {
       if (error) {
@@ -86,7 +86,7 @@ function executeWindowDiscoveryScript() {
         // For each app, try to get windows (basic simulation for now)
         appNames.forEach(appName => {
           const capability = getAppCapability(appName)
-          
+
           // Create a basic window entry for demonstration
           // In production, this would use enhanced AppleScript for each app
           windows.push({
@@ -104,7 +104,7 @@ function executeWindowDiscoveryScript() {
 
         console.log(`[WindowIndexer] Discovered ${windows.length} simulated windows from ${appNames.length} apps`)
         resolve(windows)
-        
+
       } catch (parseError) {
         console.error('[WindowIndexer] Parse error:', parseError)
         resolve([])
@@ -141,11 +141,11 @@ function filterWindows(windows, selectedApps = []) {
   if (!Array.isArray(selectedApps) || selectedApps.length === 0) {
     return windows.filter(window => {
       // Exclude system dialogs and background windows
-      return window.title && 
-             window.title !== '' && 
-             window.layer >= 0 &&
-             !window.title.startsWith('Untitled') &&
-             window.appName !== 'Window Server'
+      return window.title &&
+        window.title !== '' &&
+        window.layer >= 0 &&
+        !window.title.startsWith('Untitled') &&
+        window.appName !== 'Window Server'
     })
   }
 
@@ -153,17 +153,17 @@ function filterWindows(windows, selectedApps = []) {
   const selectedSet = new Set(selectedApps.map(name => name.toLowerCase()))
   return windows.filter(window => {
     const appNameLower = window.appName.toLowerCase()
-    
+
     // Check if app is selected (directly or by alias)
     if (selectedSet.has(appNameLower)) {
       return true
     }
-    
+
     // Check common aliases
     if (appNameLower === 'google chrome' && selectedSet.has('chrome')) return true
     if (appNameLower === 'brave browser' && selectedSet.has('brave')) return true
     if (appNameLower === 'visual studio code' && selectedSet.has('vs code')) return true
-    
+
     return false
   })
 }
@@ -175,15 +175,15 @@ async function getSystemWindows(options = {}) {
   const { selectedApps = [] } = options
   const selectionKey = buildSelectionKey(selectedApps)
   const now = Date.now()
-  
+
   // Determine cache duration for this selection
   const cacheConfig = determineCacheConfig(selectedApps)
-  
+
   // Return cached if fresh
-  if (windowCache && 
-      windowCache.length > 0 && 
-      cacheKey === selectionKey &&
-      (now - cacheTimestamp) < cacheConfig.duration) {
+  if (windowCache &&
+    windowCache.length > 0 &&
+    cacheKey === selectionKey &&
+    (now - cacheTimestamp) < cacheConfig.duration) {
     console.log('[WindowIndexer] Returning cached windows (instant)')
     return windowCache
   }
@@ -198,7 +198,7 @@ async function getSystemWindows(options = {}) {
     try {
       console.log('[WindowIndexer] Discovering system windows...')
       const rawWindows = await executeWindowDiscoveryScript()
-      
+
       // Filter and enhance windows
       const filteredWindows = filterWindows(rawWindows, selectedApps)
       const enhancedWindows = filteredWindows.map(window => ({
@@ -215,7 +215,7 @@ async function getSystemWindows(options = {}) {
       windowCache = enhancedWindows
       cacheTimestamp = now
       cacheKey = selectionKey
-      
+
       console.log(`[WindowIndexer] Discovered ${enhancedWindows.length} windows from ${new Set(enhancedWindows.map(w => w.appName)).size} apps`)
       return enhancedWindows
     } catch (error) {
@@ -239,7 +239,7 @@ function determineCacheConfig(selectedApps) {
 
   // Find the most restrictive cache duration among selected apps
   let minDuration = CACHE_CONFIG.universal.duration
-  
+
   selectedApps.forEach(appName => {
     const capability = APP_CAPABILITIES[appName]
     if (capability) {

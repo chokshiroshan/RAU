@@ -3,7 +3,7 @@
  * Stores recent selections for quick access when search is empty
  */
 
-const HISTORY_KEY = 'context-search-history'
+const HISTORY_KEY = 'rau-history'
 const MAX_HISTORY_SIZE = 20
 
 /**

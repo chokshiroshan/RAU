@@ -1,5 +1,5 @@
 /**
- * Preload script for ContextSearch
+ * Preload script for RAU
  * Bridges the main process and renderer using contextBridge
  *
  * This script runs in the renderer process but has access to Node.js APIs.

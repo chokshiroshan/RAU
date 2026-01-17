@@ -22,7 +22,7 @@ function setOpenSettingsCallback(callback) {
 function createAppMenu() {
   const template = [
     {
-      label: 'ContextSearch',
+      label: 'RAU',
       submenu: [
         {
           label: 'Preferences...',
@@ -73,11 +73,11 @@ function createAppMenu() {
       label: 'Help',
       submenu: [
         {
-          label: 'About ContextSearch',
+          label: 'About RAU',
           click: () => {
             dialog.showMessageBox({
-              title: 'About ContextSearch',
-              message: 'ContextSearch',
+              title: 'About RAU',
+              message: 'RAU',
               detail: 'A fast, elegant launcher for macOS\n\nVersion 1.0.0'
             })
           }

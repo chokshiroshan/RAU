@@ -4,7 +4,7 @@ import { ipcRenderer } from '../services/electron'
 const SLIDES = [
     {
         id: 'welcome',
-        title: 'Welcome to ContextSearch',
+        title: 'Welcome to RAU',
         subtitle: 'Your new superpower for macOS',
         icon: '🚀',
         content: 'A lightning-fast launcher that searches apps, browser tabs, and files from one place.',
@@ -16,7 +16,7 @@ const SLIDES = [
         icon: '⌨️',
         content: null,
         hotkey: '⌘ ⇧ Space',
-        hotkeyDescription: 'Opens ContextSearch from anywhere',
+        hotkeyDescription: 'Opens RAU from anywhere',
     },
     {
         id: 'search-types',

@@ -1,5 +1,5 @@
 {
-  "name": "context-search",
+  "name": "rau",
   "version": "1.0.0",
   "description": "A macOS launcher app (Spotlight alternative)",
   "main": "electron/main.js",

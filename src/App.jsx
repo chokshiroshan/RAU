@@ -7,7 +7,7 @@ import { searchUnified } from './services/unifiedSearch'
 import { ipcRenderer } from './services/electron'
 import { getHistory, addToHistory } from './services/historyService'
 
-const ONBOARDING_KEY = 'context-search-onboarding-complete'
+const ONBOARDING_KEY = 'rau-onboarding-complete'
 
 // ⚠️ DEBUG: Set to true to reset onboarding on next load
 const DEBUG_RESET_ONBOARDING = false

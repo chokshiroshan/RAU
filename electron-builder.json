@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "com.contextsearch.app",
-  "productName": "ContextSearch",
+  "appId": "com.rau.app",
+  "productName": "RAU",
   "directories": {
     "output": "release",
     "buildResources": "build"
@@ -21,11 +21,15 @@
     "target": [
       {
         "target": "dmg",
-        "arch": ["universal"]
+        "arch": [
+          "universal"
+        ]
       },
       {
         "target": "zip",
-        "arch": ["universal"]
+        "arch": [
+          "universal"
+        ]
       }
     ],
     "hardenedRuntime": true,

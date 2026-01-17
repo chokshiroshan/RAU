@@ -36,7 +36,7 @@ function handleFatalError(type, error) {
 
   // Show user-facing dialog
   dialog.showErrorBox(
-    'ContextSearch Error',
+    'RAU Error',
     `An unexpected error occurred:\n\n${error.message}\n\nThe app will attempt to recover.`
   )
 

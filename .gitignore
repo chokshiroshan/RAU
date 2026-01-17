@@ -27,3 +27,9 @@ npm-debug.log*
 tmp/
 temp/
 *.tmp
+
+# macOS metadata
+._*
+
+# markdown files
+.md 
