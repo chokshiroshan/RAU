@@ -20,8 +20,10 @@ function setMainWindow(window) {
  * Returns proper success/failure status
  */
 async function executeCommand(_event, action) {
+  logger.log('[SystemHandler] executeCommand called with action:', action)
   // Hide window before executing command
   if (mainWindow && !mainWindow.isDestroyed()) {
+    logger.log('[SystemHandler] HIDING window before executing command:', action)
     mainWindow.hide()
   }
 

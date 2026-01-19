@@ -122,10 +122,107 @@ function validateSearchQuery(query) {
   return { valid: true, value: sanitized }
 }
 
+/**
+ * Validate plugin filename to prevent path traversal
+ * Only allows alphanumeric, underscore, hyphen, and .applescript extension
+ * @param {string} filename - Plugin filename to validate
+ * @returns {{valid: boolean, error?: string, value?: string}}
+ */
+function validatePluginFilename(filename) {
+  if (!filename || typeof filename !== 'string') {
+    return { valid: false, error: 'Invalid plugin filename' }
+  }
+
+  const trimmed = filename.trim()
+
+  // Must end with .applescript
+  if (!trimmed.endsWith('.applescript')) {
+    return { valid: false, error: 'Plugin must be an .applescript file' }
+  }
+
+  // Prevent path traversal - no slashes, no dots except for extension
+  if (trimmed.includes('/') || trimmed.includes('\\')) {
+    return { valid: false, error: 'Path traversal detected in plugin filename' }
+  }
+
+  // Check for parent directory traversal patterns
+  if (trimmed.includes('..')) {
+    return { valid: false, error: 'Path traversal detected in plugin filename' }
+  }
+
+  // Only allow safe characters: alphanumeric, underscore, hyphen, space, and the extension dot
+  const baseName = trimmed.slice(0, -12) // Remove '.applescript'
+  if (!/^[\w\s-]+$/.test(baseName)) {
+    return { valid: false, error: 'Plugin filename contains invalid characters' }
+  }
+
+  // Limit length
+  if (trimmed.length > 255) {
+    return { valid: false, error: 'Plugin filename too long' }
+  }
+
+  return { valid: true, value: trimmed }
+}
+
+/**
+ * Validate shortcut name to prevent command injection
+ * Allows typical shortcut names but blocks dangerous patterns
+ * @param {string} name - Shortcut name to validate
+ * @returns {{valid: boolean, error?: string, value?: string}}
+ */
+function validateShortcutName(name) {
+  if (!name || typeof name !== 'string') {
+    return { valid: false, error: 'Invalid shortcut name' }
+  }
+
+  const trimmed = name.trim()
+
+  // Empty name
+  if (trimmed === '') {
+    return { valid: false, error: 'Empty shortcut name' }
+  }
+
+  // Limit length to prevent DoS
+  if (trimmed.length > 500) {
+    return { valid: false, error: 'Shortcut name too long' }
+  }
+
+  // Block command-line flag injection (names starting with -)
+  if (trimmed.startsWith('-')) {
+    return { valid: false, error: 'Shortcut name cannot start with hyphen' }
+  }
+
+  // Block shell metacharacters that could cause issues
+  const dangerousChars = /[`$|;&<>]/
+  if (dangerousChars.test(trimmed)) {
+    return { valid: false, error: 'Shortcut name contains invalid characters' }
+  }
+
+  return { valid: true, value: trimmed }
+}
+
+/**
+ * Sanitize a string for use in mdfind queries
+ * Escapes quotes and other characters that could break the query
+ * @param {string} str - String to sanitize for mdfind
+ * @returns {string} Sanitized string safe for mdfind queries
+ */
+function sanitizeMdfindQuery(str) {
+  if (!str || typeof str !== 'string') return ''
+  
+  // Escape double quotes and backslashes
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+}
+
 module.exports = {
   validateFilePath,
   validateAppPath,
   validatePositiveInt,
   validateUrlProtocol,
   validateSearchQuery,
+  validatePluginFilename,
+  validateShortcutName,
+  sanitizeMdfindQuery,
 }

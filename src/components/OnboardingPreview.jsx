@@ -115,4 +115,6 @@ function OnboardingPreview() {
   )
 }
 
+OnboardingPreview.displayName = 'OnboardingPreview'
+
 export default OnboardingPreview

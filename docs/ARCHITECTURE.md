@@ -178,20 +178,22 @@ export const IPC_CHANNELS = {
 **Main Process Handler**:
 ```javascript
 // electron/main-process/handlers/actionHandler.js
+const { success, error } = require('../../../shared/utils/ipcResponse')
+
 async function openApp(_event, appPath) {
   // 1. Validate input
   const validation = validateAppPath(appPath)
   if (!validation.valid) {
-    return { success: false, error: validation.error }
+    return error(validation.error)
   }
   
   // 2. Execute system operation safely
   return new Promise((resolve) => {
-    execFile('open', [validation.value], { timeout: 5000 }, (error) => {
-      if (error) {
-        resolve({ success: false, error: error.message })
+    execFile('open', [validation.value], { timeout: 5000 }, (err) => {
+      if (err) {
+        resolve(error(err))
       } else {
-        resolve({ success: true })
+        resolve(success())
       }
     })
   })
@@ -201,15 +203,11 @@ async function openApp(_event, appPath) {
 **Renderer Process Service**:
 ```javascript
 // src/services/appSearch.js
+import { safeInvoke } from '../utils/ipc'
+
 export async function getAllApps() {
-  if (!ipcRenderer) return []
-  
-  try {
-    return await ipcRenderer.invoke(IPC_CHANNELS.GET_APPS)
-  } catch (error) {
-    console.error('[AppSearch] Error:', error)
-    return []
-  }
+  // safeInvoke catches errors and logs them automatically
+  return await safeInvoke('get-apps') || []
 }
 ```
 

@@ -78,6 +78,19 @@ export const ipcRenderer = {
       'open-url': 'openUrl',
       'mark-onboarding-complete': 'markOnboardingComplete',
       'show-settings': 'showSettings',
+      'get-shortcuts': 'getShortcuts',
+      'get-plugins': 'getPlugins',
+      'run-shortcut': 'runShortcut',
+      'run-plugin': 'runPlugin',
+      'scriptsmith-generate': 'scriptsmithGenerate',
+      'scriptsmith-save': 'scriptsmithSave',
+      'scriptsmith-set-api-key': 'scriptsmithSetApiKey',
+      'scriptsmith-set-provider': 'scriptsmithSetProvider',
+      'scriptsmith-set-model': 'scriptsmithSetModel',
+      'scriptsmith-get-providers': 'scriptsmithGetProviders',
+      'scriptsmith-get-models': 'scriptsmithGetModels',
+      'scriptsmith-get-config': 'scriptsmithGetConfig',
+      'scriptsmith-has-api-key': 'scriptsmithHasApiKey',
     }
     const method = methodMap[channel]
     if (!method) {
@@ -95,6 +108,8 @@ export const ipcRenderer = {
     const methodMap = {
       'hide-window': 'hideWindow',
       'renderer-ready': 'signalRendererReady',
+      'set-search-active': 'setSearchActive',
+      'set-has-query': 'setHasQuery',
     }
     const method = methodMap[channel]
     if (!method) {

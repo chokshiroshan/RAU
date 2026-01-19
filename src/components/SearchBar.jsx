@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, memo } from 'react'
 
 const SearchBar = forwardRef(({ value, onChange, isLoading, hasResults }, ref) => {
   return (
@@ -39,4 +39,4 @@ const SearchBar = forwardRef(({ value, onChange, isLoading, hasResults }, ref) =
 
 SearchBar.displayName = 'SearchBar'
 
-export default SearchBar
+export default memo(SearchBar)

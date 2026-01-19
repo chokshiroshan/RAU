@@ -16,7 +16,12 @@ tell application "APP_NAME"
                 
                 -- Try to get document information
                 try
-                    set doc to document 1 of w
+                    try
+                        set doc to document 1 of w
+                    on error
+                        set doc to document of w
+                    end try
+                    
                     set docName to name of doc
                     set docPath to path of doc
                     
@@ -34,6 +39,7 @@ tell application "APP_NAME"
                 end try
                 
                 -- Skip empty/untitled documents unless they're the only thing
+                set shouldSkip to false
                 if docName is "untitled" and winCount > 1 then
                     -- Check if this document has actual content
                     try
@@ -42,19 +48,21 @@ tell application "APP_NAME"
                         -- Only include if it has a path (saved document)
                         if docPath is "" then
                             -- Skip unsaved untitled documents
-                            continue repeat
+                            set shouldSkip to true
                         end if
                     on error
-                        continue repeat
+                        set shouldSkip to true
                     end try
                 end if
                 
-                set docInfo to docName & "|||" & docPath & "|||" & i & "|||" & 1 & "|||APP_NAME"
-                
-                if length of docList > 0 then
-                    set docList to docList & "," & docInfo
-                else
-                    set docList to docInfo
+                if shouldSkip is false then
+                    set docInfo to docName & "|||" & docPath & "|||" & i & "|||" & 1 & "|||APP_NAME"
+                    
+                    if length of docList > 0 then
+                        set docList to docList & "," & docInfo
+                    else
+                        set docList to docInfo
+                    end if
                 end if
                 
             on error winError

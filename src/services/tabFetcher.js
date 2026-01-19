@@ -18,31 +18,15 @@ let tabCacheKey = null
 let pendingFetch = null // Mutex to prevent concurrent fetches
 let pendingFetchKey = null
 
-// Safe logging helper to prevent EPIPE/EIO crashes
-// These errors happen asynchronously when stdout/stderr streams close
-const stdoutWritable = { value: true }
-const stderrWritable = { value: true }
-
-// Mark streams as unwritable on error
-if (process.stdout) {
-  process.stdout.on('error', () => { stdoutWritable.value = false })
-}
-if (process.stderr) {
-  process.stderr.on('error', () => { stderrWritable.value = false })
-}
+const logger = require('../../electron/main-process/logger')
+const windowHandler = require('../../electron/main-process/handlers/windowHandler')
 
 /**
  * Safe console.log wrapper that prevents EPIPE crashes
  * @param {...any} args - Values to log
  */
 function safeLog(...args) {
-  if (stdoutWritable.value) {
-    try {
-      console.log(...args)
-    } catch {
-      stdoutWritable.value = false
-    }
-  }
+  logger.log('[TabFetcher]', ...args)
 }
 
 /**
@@ -50,13 +34,7 @@ function safeLog(...args) {
  * @param {...any} args - Values to log
  */
 function safeError(...args) {
-  if (stderrWritable.value) {
-    try {
-      console.error(...args)
-    } catch {
-      stderrWritable.value = false
-    }
-  }
+  logger.error('[TabFetcher]', ...args)
 }
 
 /**
@@ -394,8 +372,9 @@ function executeCustomScript(scriptPath, appName) {
         
         // Execute the temporary script
         execFile('osascript', [tempScriptPath], { timeout: 15000 }, (execError, stdout, stderr) => {
-          // Clean up temp file
-          fs.unlink(tempScriptPath, () => {}) // Async cleanup, ignore errors
+          fs.unlink(tempScriptPath, (unlinkErr) => {
+            if (unlinkErr) safeLog(`[TabFetcher] Failed to cleanup temp file: ${tempScriptPath}`)
+          })
           
           if (execError) {
             safeError(`[TabFetcher] Script execution error for ${appName}:`, execError.message)
@@ -559,9 +538,11 @@ async function getAllTabs(options = {}) {
 
   // SWR: Return cached results INSTANTLY if they exist
   if (tabCache && tabCache.length > 0 && tabCacheKey === selectionKey) {
-    // If cache is stale, trigger background refresh
     if ((now - cacheTimestamp) > CACHE_DURATION) {
-      if (!pendingFetch || pendingFetchKey !== selectionKey) {
+      const userHasQuery = windowHandler.getHasQuery()
+      if (userHasQuery) {
+        safeLog('[TabFetcher] Cache stale but user typing, skipping background refresh')
+      } else if (!pendingFetch || pendingFetchKey !== selectionKey) {
         safeLog('[TabFetcher] Cache stale, triggering background refresh')
         refreshTabs(options).catch(err => safeError('[TabFetcher] Bg refresh error:', err))
       }

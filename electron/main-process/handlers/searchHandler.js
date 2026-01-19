@@ -24,15 +24,19 @@ async function searchFiles(_event, query) {
   const sanitizedQuery = validation.value
   const settings = getSettings()
   const exclusions = settings.fileExclusions || []
+  
+  const { MDFIND_TIMEOUT_MS } = require('../constants')
 
   return new Promise((resolve) => {
     // Use standard -name for reliable filename search
     // We request more results (200) to allow for exclusion filtering
-    execFile('mdfind', ['-name', sanitizedQuery, '-limit', '200'],
-      { timeout: 1000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout) => {
+    execFile('mdfind', ['-name', sanitizedQuery],
+      { timeout: MDFIND_TIMEOUT_MS, maxBuffer: 10 * 1024 * 1024 }, (error, stdout) => {
         if (error) {
           if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
             logger.warn('[SearchHandler] mdfind returned too many results, using partial data')
+          } else if (error.signal === 'SIGTERM' && error.killed) {
+            logger.warn(`[SearchHandler] mdfind timed out for query "${sanitizedQuery}" (> ${MDFIND_TIMEOUT_MS}ms)`)
           } else {
             logger.error('[SearchHandler] mdfind error:', error)
           }

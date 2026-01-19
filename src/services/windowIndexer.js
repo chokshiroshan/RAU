@@ -7,31 +7,21 @@
 const { execFile } = require('child_process')
 const path = require('path')
 
+const logger = require('../../electron/main-process/logger')
+
 /**
  * Safe logging utilities to prevent EPIPE crashes
  */
 function safeLog(...args) {
-  try {
-    console.log('[WindowIndexer]', ...args)
-  } catch {
-    // Silently ignore EPIPE errors
-  }
+  logger.log('[WindowIndexer]', ...args)
 }
 
 function safeWarn(...args) {
-  try {
-    console.warn('[WindowIndexer]', ...args)
-  } catch {
-    // Silently ignore EPIPE errors
-  }
+  logger.warn('[WindowIndexer]', ...args)
 }
 
 function safeError(...args) {
-  try {
-    console.error('[WindowIndexer]', ...args)
-  } catch {
-    // Silently ignore EPIPE errors
-  }
+  logger.error('[WindowIndexer]', ...args)
 }
 
 // Cache configuration for different app types

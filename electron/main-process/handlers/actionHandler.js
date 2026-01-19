@@ -7,10 +7,12 @@ const path = require('path')
 const fs = require('fs')
 const { shell } = require('electron')
 const { execFile } = require('child_process')
+const { MDFIND_TIMEOUT_MS } = require('../constants')
 const {
   validateFilePath,
   validateAppPath,
   validateUrlProtocol,
+  sanitizeMdfindQuery,
 } = require('../../../shared/validation/validators')
 const { extractIconWithTimeout } = require('../services/iconExtractor')
 const { getAllTabs, activateTabWithRetry } = require('../../../src/services/tabFetcher')
@@ -85,7 +87,7 @@ function isRunnableApp(appPath) {
     'helper', 'service', 'daemon', 'agent', 'plugin', 'updater',
     'installer', 'uninstaller', 'crashreporter', 'renderer', 'gpu process'
   ]
-  
+
   const matchedKeyword = excludeKeywords.find(keyword => appName.includes(keyword))
   if (matchedKeyword) {
     logger.log(`[ActionHandler] Filtered out: "${appName}" (matched: ${matchedKeyword})`)
@@ -171,6 +173,7 @@ async function openFile(_event, filePath) {
         }
       } else {
         if (mainWindow && !mainWindow.isDestroyed()) {
+          logger.log('[ActionHandler] HIDING window after opening file:', validatedPath)
           mainWindow.hide()
         }
         resolve({ success: true })
@@ -200,6 +203,7 @@ async function activateTabHandler(_event, tab) {
     const settings = getSettings()
     const success = await activateTabWithRetry(tab, { selectedApps: settings.selectedApps })
     if (success && mainWindow && !mainWindow.isDestroyed()) {
+      logger.log('[ActionHandler] HIDING window after activating tab:', tab.title || tab.name)
       mainWindow.hide()
     }
     return { success }
@@ -224,9 +228,13 @@ async function getApps() {
 
   // Fetch fresh apps
   return new Promise((resolve) => {
-    execFile('mdfind', ['kMDItemKind == "Application"'], { timeout: 1000 }, (error, stdout) => {
+    execFile('mdfind', ['kMDItemKind == "Application"'], { timeout: MDFIND_TIMEOUT_MS }, (error, stdout) => {
       if (error) {
-        logger.error('[ActionHandler] mdfind error for apps:', error)
+        if (error.signal === 'SIGTERM' && error.killed) {
+          logger.warn(`[ActionHandler] mdfind timed out for apps (> ${MDFIND_TIMEOUT_MS}ms)`)
+        } else {
+          logger.error('[ActionHandler] mdfind error for apps:', error)
+        }
         // Return stale cache if available, otherwise empty
         resolve(appsCache || [])
         return
@@ -309,7 +317,7 @@ async function getAppIconByName(_event, appName) {
 
   // If not in cache, search for the app
   return new Promise((resolve) => {
-    const searchName = appName.replace(/\.app$/, '')
+    const searchName = sanitizeMdfindQuery(appName.replace(/\.app$/, ''))
     execFile('mdfind', [`kMDItemKind == "Application" && kMDItemDisplayName == "${searchName}"`],
       { timeout: 2000 },
       (error, stdout) => {
@@ -360,6 +368,7 @@ async function openApp(_event, appPath) {
         }
       } else {
         if (mainWindow && !mainWindow.isDestroyed()) {
+          logger.log('[ActionHandler] HIDING window after opening app:', validatedPath)
           mainWindow.hide()
         }
         resolve({ success: true })
@@ -382,6 +391,7 @@ async function openUrl(_event, url) {
   try {
     await shell.openExternal(validation.value)
     if (mainWindow && !mainWindow.isDestroyed()) {
+      logger.log('[ActionHandler] HIDING window after opening URL:', validation.value)
       mainWindow.hide()
     }
     return { success: true }

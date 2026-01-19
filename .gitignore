@@ -24,6 +24,9 @@ npm-debug.log*
 .env.local
 .env.*.local
 
+# User configuration
+electron/settings.json
+
 # Temporary files
 tmp/
 temp/

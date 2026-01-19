@@ -160,6 +160,8 @@ function createWindow() {
       }, 1000)
     })
 
+    if (onWindowReady) onWindowReady(mainWindow)
+
     // Load the app
     const htmlPath = path.join(__dirname, '../../..', 'dist/index.html')
     mainWindow.loadFile(htmlPath).then(() => {
@@ -172,7 +174,6 @@ function createWindow() {
     // Resolve promise when window is ready to show
     mainWindow.once('ready-to-show', () => {
       logger.log('[Window] Ready to show')
-      if (onWindowReady) onWindowReady(mainWindow)
       resolve(mainWindow)
     })
 
@@ -186,18 +187,47 @@ function createWindow() {
     // 300ms delay prevents race condition with focus transfer on hotkey activation
     let blurTimeout
     const settingsWindow = require('./settingsWindow')
+    const windowHandler = require('../handlers/windowHandler')
     mainWindow.on('blur', () => {
-      if (blurTimeout) clearTimeout(blurTimeout)
+      logger.log('[Window] BLUR event fired')
+      if (blurTimeout) {
+        logger.log('[Window] BLUR - clearing existing timeout')
+        clearTimeout(blurTimeout)
+      }
       blurTimeout = setTimeout(() => {
+        logger.log('[Window] BLUR timeout fired (300ms elapsed)')
+        // Don't hide if user has a query entered (still searching)
+        if (windowHandler.getHasQuery()) {
+          logger.log('[Window] BLUR - user has query, NOT hiding')
+          return
+        }
+        // Don't hide if search is in progress
+        if (windowHandler.isSearchActive()) {
+          logger.log('[Window] BLUR - search active, NOT hiding')
+          return
+        }
         // Don't hide if settings window is open and focused
         const sw = settingsWindow.getSettingsWindow()
         if (sw && !sw.isDestroyed() && sw.isFocused()) {
+          logger.log('[Window] BLUR - settings window focused, NOT hiding')
           return
         }
         if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+          logger.log('[Window] BLUR - hiding window now')
           mainWindow.hide()
+        } else {
+          logger.log('[Window] BLUR - window already hidden/destroyed, skipping hide')
         }
       }, 300)
+    })
+    
+    mainWindow.on('focus', () => {
+      logger.log('[Window] FOCUS event fired')
+      if (blurTimeout) {
+        logger.log('[Window] FOCUS - canceling blur timeout')
+        clearTimeout(blurTimeout)
+        blurTimeout = null
+      }
     })
 
     // Clean up on close
@@ -221,6 +251,7 @@ function createWindow() {
  * Uses mutex to prevent race condition from rapid hotkey presses
  */
 async function toggleWindow() {
+  logger.log('[Toggle] toggleWindow() called')
   // Prevent concurrent toggle attempts
   if (toggleInProgress) {
     logger.log('[Toggle] Already in progress, ignoring')
@@ -228,14 +259,16 @@ async function toggleWindow() {
   }
 
   toggleInProgress = true
+  logger.log('[Toggle] Starting toggle operation')
 
   try {
     // If window doesn't exist or was destroyed, create it
     if (!mainWindow || mainWindow.isDestroyed()) {
-      logger.log('[Toggle] Creating new window')
+      logger.log('[Toggle] Window null/destroyed, creating new window')
       await createWindow()
 
       if (mainWindow && !mainWindow.isDestroyed()) {
+        logger.log('[Toggle] New window created, showing')
         repositionWindow()
         mainWindow.show()
         mainWindow.focus()
@@ -244,15 +277,21 @@ async function toggleWindow() {
 
         if (mainWindow.webContents && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('window-shown')
+          logger.log('[Toggle] Sent window-shown to renderer')
         }
       }
       return
     }
 
     // Toggle visibility
-    if (mainWindow.isVisible()) {
+    const wasVisible = mainWindow.isVisible()
+    logger.log(`[Toggle] Window exists, wasVisible=${wasVisible}`)
+    
+    if (wasVisible) {
+      logger.log('[Toggle] HIDING window via toggle')
       mainWindow.hide()
     } else {
+      logger.log('[Toggle] SHOWING window via toggle')
       repositionWindow()
       mainWindow.show()
       mainWindow.focus()
@@ -261,6 +300,7 @@ async function toggleWindow() {
 
       if (mainWindow.webContents && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('window-shown')
+        logger.log('[Toggle] Sent window-shown to renderer')
       }
     }
   } catch (error) {
@@ -269,6 +309,7 @@ async function toggleWindow() {
     windowReadyPromise = null
   } finally {
     toggleInProgress = false
+    logger.log('[Toggle] Toggle operation complete')
   }
 }
 

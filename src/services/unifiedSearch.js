@@ -2,7 +2,7 @@ import Fuse from 'fuse.js'
 import { searchFiles } from './fileSearch'
 import { getAllApps } from './appSearch'
 import { searchCommands } from './commandSearch'
-import * as browserCommander from './browserCommander'
+// import * as browserCommander from './browserCommander'
 import { getWebSearchResult } from './webSearch'
 import { ipcRenderer } from './electron'
 import { logger } from '../utils/logger'
@@ -119,6 +119,28 @@ export async function searchUnified(query, filters, cachedSettings = null) {
     }]
   }
 
+  // Check for Scriptsmith trigger
+  if (trimmedQuery === '/' || trimmedQuery.toLowerCase().startsWith('/g')) {
+    const isGen = trimmedQuery.toLowerCase().startsWith('/gen')
+    const prompt = isGen 
+      ? trimmedQuery.slice(4).trim() 
+      : trimmedQuery.toLowerCase().startsWith('/g') 
+        ? trimmedQuery.slice(2).trim() 
+        : ''
+        
+    // Only show if it looks like they might be trying to generate something
+    // or just exploring commands
+    return [{
+      type: 'scriptsmith-trigger',
+      name: prompt ? `Generate: ${prompt}` : 'Generate AppleScript with AI...',
+      description: 'Use Scriptsmith to create custom automation',
+      icon: null,
+      prompt: prompt,
+      priority: 100,
+      score: 0
+    }]
+  }
+
   try {
     if (!ipcRenderer) {
       logger.error('UnifiedSearch', 'ipcRenderer unavailable; skipping searches.')
@@ -166,7 +188,31 @@ export async function searchUnified(query, filters, cachedSettings = null) {
       searchPromises.push(Promise.resolve([]))
     }
 
-    // Search apps, files, and tabs in parallel with timeout
+    // Search Shortcuts
+    if (activeFilters.shortcuts !== false && settings && settings.searchShortcuts !== false) {
+      searchPromises.push(
+        ipcRenderer.invoke('get-shortcuts').catch(err => {
+          logger.warn('UnifiedSearch', 'Shortcuts search failed:', err.message)
+          return []
+        })
+      )
+    } else {
+      searchPromises.push(Promise.resolve([]))
+    }
+
+    // Search Plugins
+    if (activeFilters.plugins !== false && settings && settings.searchPlugins !== false) {
+      searchPromises.push(
+        ipcRenderer.invoke('get-plugins').catch(err => {
+          logger.warn('UnifiedSearch', 'Plugins search failed:', err.message)
+          return []
+        })
+      )
+    } else {
+      searchPromises.push(Promise.resolve([]))
+    }
+
+    // Search apps, files, tabs, shortcuts, plugins in parallel with timeout
     const searchPromise = Promise.all(searchPromises)
 
     // Add timeout to prevent hanging
@@ -174,18 +220,20 @@ export async function searchUnified(query, filters, cachedSettings = null) {
       setTimeout(() => reject(new Error('Search timeout')), 5000)
     )
 
-    const [apps, tabs, fileResults] = await Promise.race([
+    logger.debug('UnifiedSearch', 'Awaiting Promise.race (search vs 5s timeout)...')
+    const [apps, tabs, fileResults, shortcuts, plugins] = await Promise.race([
       searchPromise,
       timeoutPromise
     ]).catch(err => {
       logger.error('UnifiedSearch', 'Search error:', err.message)
-      return [[], [], []]
+      return [[], [], [], [], []]
     })
+    logger.debug('UnifiedSearch', 'Promise.race resolved')
 
-    logger.debug('UnifiedSearch', `Raw results - Apps: ${apps.length}, Files: ${fileResults.length}, Tabs: ${tabs.length}`)
+    logger.debug('UnifiedSearch', `Raw results - Apps: ${apps.length}, Files: ${fileResults.length}, Tabs: ${tabs.length}, Shortcuts: ${shortcuts.length}, Plugins: ${plugins.length}`)
 
     // Check for Browser Action Commands (Close tabs, etc.)
-    const actionResults = browserCommander.searchActions(trimmedQuery, tabs)
+    // const actionResults = browserCommander.searchActions(trimmedQuery, tabs)
     
     // Add type indicator to app results with priority boost
     const appsWithType = apps.map(app => ({
@@ -209,12 +257,27 @@ export async function searchUnified(query, filters, cachedSettings = null) {
       priority: 1, // Lowest priority
     }))
 
+    // Add type indicator to shortcut results
+    const shortcutsWithType = shortcuts.map(shortcut => ({
+      ...shortcut,
+      type: 'shortcut',
+      priority: 2.5, // High priority (between tabs and apps)
+      icon: null // TODO: Get shortcut icon
+    }))
+
+    // Add type indicator to plugin results
+    const pluginsWithType = plugins.map(plugin => ({
+      ...plugin,
+      type: 'plugin',
+      priority: 2.5,
+    }))
+
     // Search for system commands (these bypass Fuse.js)
     const commands = activeFilters.commands ? searchCommands(trimmedQuery) : []
     logger.debug('UnifiedSearch', `Found ${commands.length} matching commands`)
 
     // Combine all result types for Fuse.js (NOT commands - they are pre-matched)
-    const allResults = [...appsWithType, ...tabsWithType, ...filesWithType]
+    const allResults = [...appsWithType, ...tabsWithType, ...filesWithType, ...shortcutsWithType, ...pluginsWithType]
 
     // Apply fuzzy search on combined results
     let fuzzyResults = []

@@ -41,6 +41,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Fire-and-forget messages
   hideWindow: () => ipcRenderer.send('hide-window'),
   signalRendererReady: () => ipcRenderer.send('renderer-ready'),
+  setSearchActive: (active) => ipcRenderer.send('set-search-active', active),
+  setHasQuery: (has) => ipcRenderer.send('set-has-query', has),
 
   // Window management
   resizeWindow: (expanded) => ipcRenderer.invoke('resize-window', expanded),
@@ -50,6 +52,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Settings
   showSettings: () => ipcRenderer.invoke('show-settings'),
+
+  // Automation (Shortcuts & Plugins)
+  getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),
+  runShortcut: (name, input) => ipcRenderer.invoke('run-shortcut', name, input),
+  getPlugins: () => ipcRenderer.invoke('get-plugins'),
+  runPlugin: (filename) => ipcRenderer.invoke('run-plugin', filename),
+
+  // Scriptsmith (AI Script Generation)
+  scriptsmithGenerate: (prompt) => ipcRenderer.invoke('scriptsmith-generate', prompt),
+  scriptsmithSave: (script, filename) => ipcRenderer.invoke('scriptsmith-save', script, filename),
+  scriptsmithSetApiKey: (provider, key) => ipcRenderer.invoke('scriptsmith-set-api-key', provider, key),
+  scriptsmithSetProvider: (provider) => ipcRenderer.invoke('scriptsmith-set-provider', provider),
+  scriptsmithSetModel: (model) => ipcRenderer.invoke('scriptsmith-set-model', model),
+  scriptsmithGetProviders: () => ipcRenderer.invoke('scriptsmith-get-providers'),
+  scriptsmithGetModels: (provider) => ipcRenderer.invoke('scriptsmith-get-models', provider),
+  scriptsmithGetConfig: () => ipcRenderer.invoke('scriptsmith-get-config'),
+  scriptsmithHasApiKey: () => ipcRenderer.invoke('scriptsmith-has-api-key'),
 })
 
 // Log when preload script is loaded

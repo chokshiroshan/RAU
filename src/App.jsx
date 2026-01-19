@@ -3,8 +3,10 @@ import SearchBar from './components/SearchBar'
 import ResultsList from './components/ResultsList'
 import Onboarding from './components/Onboarding'
 import Settings from './components/Settings'
+import ScriptsmithModal from './components/ScriptsmithModal'
 import { searchUnified } from './services/unifiedSearch'
 import { ipcRenderer } from './services/electron'
+import { safeInvoke } from './utils/ipc'
 import { getHistory, addToHistory } from './services/historyService'
 import { organizeResults } from './utils/resultOrganizer'
 import { logger } from './utils/logger'
@@ -35,25 +37,26 @@ function App() {
   const [windowHeight, setWindowHeight] = useState(62) // Collapsed by default
   const [showSettings, setShowSettings] = useState(false)
   const [appSettings, setAppSettings] = useState({})
-  
+  const [showScriptsmith, setShowScriptsmith] = useState(false)
+  const [scriptsmithPrompt, setScriptsmithPrompt] = useState('')
+
   // Navigation mode tracking: prevents mouse hover from changing selection during keyboard navigation
   const isKeyboardNavigatingRef = useRef(false)
   const lastMousePositionRef = useRef({ x: 0, y: 0 })
 
   const loadSettings = useCallback(async () => {
     if (!ipcRenderer) return
-    try {
-      const settings = await ipcRenderer.invoke('get-settings')
+    const settings = await safeInvoke('get-settings')
+    
+    if (settings) {
       setAppSettings(settings)
-      
+
       // Apply theme
       const theme = settings.theme || 'system'
       document.documentElement.classList.remove('theme-light', 'theme-dark')
       if (theme !== 'system') {
         document.documentElement.classList.add(`theme-${theme}`)
       }
-    } catch (err) {
-      logger.error('App', 'Failed to load settings', err)
     }
   }, [])
 
@@ -72,15 +75,15 @@ function App() {
   // Keep window fully expanded during onboarding so content isn't clipped
   useEffect(() => {
     if (!showOnboarding || !ipcRenderer) return
-    ipcRenderer.invoke('resize-window', 700).catch(err => {
-      logger.error('App', 'Failed to resize window for onboarding', err)
-    })
+    safeInvoke('resize-window', 700)
   }, [showOnboarding])
 
   // Focus input when window is shown
   useEffect(() => {
     const handleWindowShown = () => {
+      logger.debug('App', 'Received window-shown event from main process')
       if (inputRef.current) {
+        logger.debug('App', 'Focusing and selecting input')
         inputRef.current.focus()
         inputRef.current.select()
       }
@@ -89,8 +92,10 @@ function App() {
     }
 
     if (ipcRenderer) {
+      logger.debug('App', 'Registering window-shown listener')
       ipcRenderer.on('window-shown', handleWindowShown)
       // Debug: confirm React mounted inside Electron
+      logger.debug('App', 'Sending renderer-ready to main process')
       ipcRenderer.send('renderer-ready')
     } else {
       logger.warn('App', 'ipcRenderer unavailable; UI will render but searches will not work.')
@@ -98,11 +103,13 @@ function App() {
 
     // Focus on initial load
     if (inputRef.current) {
+      logger.debug('App', 'Initial focus on input')
       inputRef.current.focus()
     }
 
     return () => {
       if (ipcRenderer) {
+        logger.debug('App', 'Removing window-shown listener')
         ipcRenderer.removeListener('window-shown', handleWindowShown)
       }
     }
@@ -110,18 +117,33 @@ function App() {
 
   // Debounced search - pass cached settings to avoid IPC overhead per keystroke
   const performSearch = useCallback(async (searchQuery, activeFilters, settings) => {
+    logger.debug('App', `performSearch called with query="${searchQuery}"`)
     if (!searchQuery || searchQuery.trim() === '') {
+      logger.debug('App', 'performSearch: empty query, clearing results')
       setResults([])
       setSelectedIndex(0)
       return
     }
 
     const currentSearchId = ++searchIdRef.current
+    logger.debug('App', `performSearch: starting search #${currentSearchId}`)
     setIsLoading(true)
+    
+    if (ipcRenderer) {
+      logger.debug('App', 'Setting search active = true')
+      ipcRenderer.send('set-search-active', true)
+    }
+    
     try {
+      logger.debug('App', `performSearch: calling searchUnified...`)
       const searchResults = await searchUnified(searchQuery, activeFilters, settings)
-      if (searchIdRef.current !== currentSearchId) return
+      logger.debug('App', `performSearch: searchUnified returned ${searchResults?.length || 0} results`)
+      if (searchIdRef.current !== currentSearchId) {
+        logger.debug('App', `performSearch: stale search #${currentSearchId}, ignoring`)
+        return
+      }
       const organizedResults = organizeResults(searchResults)
+      logger.debug('App', `performSearch: organized to ${organizedResults?.length || 0} results`)
       setResults(organizedResults)
       setSelectedIndex(0)
     } catch (error) {
@@ -130,19 +152,44 @@ function App() {
       setResults([])
     } finally {
       if (searchIdRef.current === currentSearchId) {
+        logger.debug('App', `performSearch: search #${currentSearchId} complete, setting isLoading=false`)
         setIsLoading(false)
+        if (ipcRenderer) {
+          logger.debug('App', 'Setting search active = false')
+          ipcRenderer.send('set-search-active', false)
+        }
       }
     }
   }, [])
 
-  // Handle query change with debounce (150ms - faster response)
-  // Pass appSettings to avoid IPC overhead on every keystroke
   useEffect(() => {
+    logger.debug('App', `Query changed to: "${query}"`)
+    
+    const hasContent = query.trim().length > 0
+    if (ipcRenderer) {
+      ipcRenderer.send('set-has-query', hasContent)
+    }
+    
     if (searchTimeoutRef.current) {
+      logger.debug('App', 'Clearing previous search timeout')
       clearTimeout(searchTimeoutRef.current)
     }
 
+    const trimmedQuery = query.trim()
+    if (trimmedQuery.toLowerCase().startsWith('/gen ')) {
+      const genPrompt = trimmedQuery.slice(5).trim()
+      if (genPrompt) {
+        logger.debug('App', 'Detected /gen command, opening Scriptsmith')
+        setScriptsmithPrompt(genPrompt)
+        setShowScriptsmith(true)
+        setQuery('')
+      }
+      return
+    }
+
+    logger.debug('App', `Setting 150ms debounce for query: "${query}"`)
     searchTimeoutRef.current = setTimeout(() => {
+      logger.debug('App', `Debounce fired, calling performSearch for: "${query}"`)
       performSearch(query, filters, appSettings)
     }, 150)
 
@@ -171,17 +218,29 @@ function App() {
 
     const hasResults = hasQuery && (isLoading || results.length > 0)
     const needsExpanded = hasResults || showSettings
-    const newHeight = needsExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT
 
+    // Scriptsmith specific dimensions
+    if (showScriptsmith) {
+      if (ipcRenderer) {
+        safeInvoke('resize-window', {
+          height: EXPANDED_HEIGHT,
+          width: 850 // Slightly wider than the 800px modal to accommodate shadows/padding
+        })
+      }
+      return
+    }
+
+    const newHeight = needsExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT
     setWindowHeight(newHeight)
 
-    // Update Electron window size
+    // Update Electron window size (standard width)
     if (ipcRenderer) {
-      ipcRenderer.invoke('resize-window', newHeight).catch(err => {
-        logger.error('App', 'Failed to resize window', err)
+      safeInvoke('resize-window', {
+        height: newHeight,
+        width: 1000 // Standard constant width
       })
     }
-  }, [results.length, hasQuery, isLoading, showOnboarding, showSettings])
+  }, [results.length, hasQuery, isLoading, showOnboarding, showSettings, showScriptsmith])
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
@@ -190,57 +249,57 @@ function App() {
     const isChar = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey // Shift is fine for capitals, but usually e.key captures char
     // Actually e.key handles capitals correctly. We want to avoid shortcuts.
     const isModifier = e.ctrlKey || e.metaKey || e.altKey
-    
+
     const activeEl = document.activeElement
     const isInputFocused = activeEl && (
-      activeEl.tagName === 'INPUT' || 
+      activeEl.tagName === 'INPUT' ||
       activeEl.tagName === 'TEXTAREA' ||
       activeEl.isContentEditable
     )
 
     // If typing a regular character outside of an input field
     if (e.key.length === 1 && !isModifier && !isInputFocused) {
-        // If settings open, close it
-        if (showSettings) setShowSettings(false)
-        
-        // Focus search bar
-        inputRef.current?.focus()
-        
-        // We don't preventDefault() so the character is typed into the input
-        return
+      // If settings open, close it
+      if (showSettings) setShowSettings(false)
+
+      // Focus search bar
+      inputRef.current?.focus()
+
+      // We don't preventDefault() so the character is typed into the input
+      return
     }
 
     // If settings are open, let default behavior happen (scrolling)
     // Only capture Escape to close
     if (showSettings) {
-        if (e.key === 'Escape') {
-            e.preventDefault()
-            setShowSettings(false)
-        }
-        return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowSettings(false)
+      }
+      return
     }
 
     // 2. Region Navigation (Arrow Right/Left)
     if (e.key === 'ArrowRight') {
-        // Move focus to filter bubbles if not already there
-        if (activeEl !== settingsButtonRef.current) {
-            // If in input, only hijack if empty. If typing, allow default (cursor move).
-            if (isInputFocused && query.length > 0) {
-                return
-            }
-            e.preventDefault()
-            settingsButtonRef.current?.focus()
-            return
+      // Move focus to filter bubbles if not already there
+      if (activeEl !== settingsButtonRef.current) {
+        // If in input, only hijack if empty. If typing, allow default (cursor move).
+        if (isInputFocused && query.length > 0) {
+          return
         }
+        e.preventDefault()
+        settingsButtonRef.current?.focus()
+        return
+      }
     }
 
     if (e.key === 'ArrowLeft') {
-        // Move focus back to search input
-        if (activeEl === settingsButtonRef.current) {
-            e.preventDefault()
-            inputRef.current?.focus()
-            return
-        }
+      // Move focus back to search input
+      if (activeEl === settingsButtonRef.current) {
+        e.preventDefault()
+        inputRef.current?.focus()
+        return
+      }
     }
 
     switch (e.key) {
@@ -269,7 +328,7 @@ function App() {
       case 'Enter':
         // If settings button is focused, allow default action (click) and return
         if (document.activeElement === settingsButtonRef.current) {
-            return
+          return
         }
 
         e.preventDefault()
@@ -281,16 +340,17 @@ function App() {
             navigator.clipboard.writeText(String(result.result)).catch(err => {
               logger.error('App', 'Failed to copy to clipboard', err)
             })
-            if (ipcRenderer) ipcRenderer.send('hide-window')
+            if (ipcRenderer) {
+              logger.debug('App', 'SENDING hide-window (calculator result copied)')
+              ipcRenderer.send('hide-window')
+            }
             return
           }
 
           // Handle system command
           if (result.type === 'command') {
             if (ipcRenderer) {
-              ipcRenderer.invoke('execute-command', result.action).catch(err => {
-                logger.error('App', 'Failed to execute command', err)
-              })
+              safeInvoke('execute-command', result.action)
             }
             return
           }
@@ -298,44 +358,70 @@ function App() {
           // Handle web search
           if (result.type === 'web-search') {
             if (ipcRenderer) {
-              ipcRenderer.invoke('open-url', result.url).catch(err => {
-                logger.error('App', 'Failed to open URL', err)
-              })
+              safeInvoke('open-url', result.url)
             }
             return
           }
 
-          // Record to history (except calculators, commands, web-search)
+          // Handle shortcuts
+          if (result.type === 'shortcut') {
+            if (ipcRenderer) {
+              logger.debug('App', 'Running shortcut:', result.name)
+              safeInvoke('run-shortcut', result.name)
+              logger.debug('App', 'SENDING hide-window (shortcut executed)')
+              ipcRenderer.send('hide-window')
+            }
+            return
+          }
+
+          // Handle plugins
+          if (result.type === 'plugin') {
+            if (ipcRenderer) {
+              logger.debug('App', 'Running plugin:', result.id)
+              safeInvoke('run-plugin', result.id)
+              logger.debug('App', 'SENDING hide-window (plugin executed)')
+              ipcRenderer.send('hide-window')
+            }
+            return
+          }
+
+          // Handle Scriptsmith trigger
+          if (result.type === 'scriptsmith-trigger') {
+            setScriptsmithPrompt(result.prompt || '')
+            setShowScriptsmith(true)
+            setQuery('')
+            return
+          }
+
+          // Record to history (except calculators, commands, web-search, shortcuts, plugins)
           addToHistory(result)
 
           // Handle app, file, tab, and history selection
           if (result.type === 'app' || result.type === 'history-app') {
             if (ipcRenderer) {
-              ipcRenderer.invoke('open-app', result.path).catch(err => {
-                logger.error('App', 'Failed to open app', err)
-              })
+              safeInvoke('open-app', result.path)
             }
           } else if (result.type === 'tab' || result.type === 'history-tab' || result.type === 'window') {
             if (ipcRenderer) {
-              ipcRenderer.invoke('activate-tab', result).catch(err => {
-                logger.error('App', 'Failed to activate tab', err)
-              })
+              safeInvoke('activate-tab', result)
             }
           } else {
             if (ipcRenderer) {
-              ipcRenderer.invoke('open-file', result.path).catch(err => {
-                logger.error('App', 'Failed to open file', err)
-              })
+              safeInvoke('open-file', result.path)
             }
           }
         }
         break
       case 'Escape':
         e.preventDefault()
+        logger.debug('App', 'Escape pressed, triggering exit animation')
         // Trigger exit animation before hiding
         setIsExiting(true)
         setTimeout(() => {
-          if (ipcRenderer) ipcRenderer.send('hide-window')
+          if (ipcRenderer) {
+            logger.debug('App', 'SENDING hide-window (Escape key)')
+            ipcRenderer.send('hide-window')
+          }
           setIsExiting(false)
         }, 150) // Match --duration-exit
         break
@@ -348,7 +434,7 @@ function App() {
   const handleResultsMouseMove = useCallback((e) => {
     const { clientX, clientY } = e
     const { x: lastX, y: lastY } = lastMousePositionRef.current
-    
+
     // Only switch to mouse mode if mouse actually moved (not just element scrolled under cursor)
     if (clientX !== lastX || clientY !== lastY) {
       lastMousePositionRef.current = { x: clientX, y: clientY }
@@ -365,26 +451,44 @@ function App() {
 
   // Handle result click - using invoke for proper response handling
   const handleResultClick = useCallback((index) => {
+    logger.debug('App', `handleResultClick called for index ${index}`)
     if (results[index]) {
       const result = results[index]
+      logger.debug('App', `Clicked result type=${result.type}, name=${result.name || result.title}`)
       // Handle app, file, and tab selection
       if (result.type === 'app') {
         if (ipcRenderer) {
-          ipcRenderer.invoke('open-app', result.path).catch(err => {
-            logger.error('App', 'Failed to open app', err)
-          })
+          logger.debug('App', 'Opening app:', result.path)
+          safeInvoke('open-app', result.path)
         }
+      } else if (result.type === 'shortcut') {
+        if (ipcRenderer) {
+          logger.debug('App', 'Running shortcut (click):', result.name)
+          safeInvoke('run-shortcut', result.name)
+          logger.debug('App', 'SENDING hide-window (shortcut click)')
+          ipcRenderer.send('hide-window')
+        }
+      } else if (result.type === 'plugin') {
+        if (ipcRenderer) {
+          logger.debug('App', 'Running plugin (click):', result.id)
+          safeInvoke('run-plugin', result.id)
+          logger.debug('App', 'SENDING hide-window (plugin click)')
+          ipcRenderer.send('hide-window')
+        }
+      } else if (result.type === 'scriptsmith-trigger') {
+        logger.debug('App', 'Opening Scriptsmith via click')
+        setScriptsmithPrompt(result.prompt || '')
+        setShowScriptsmith(true)
+        setQuery('')
       } else if (result.type === 'tab' || result.type === 'window') {
         if (ipcRenderer) {
-          ipcRenderer.invoke('activate-tab', result).catch(err => {
-            logger.error('App', 'Failed to activate tab', err)
-          })
+          logger.debug('App', 'Activating tab:', result.title || result.name)
+          safeInvoke('activate-tab', result)
         }
       } else {
         if (ipcRenderer) {
-          ipcRenderer.invoke('open-file', result.path).catch(err => {
-            logger.error('App', 'Failed to open file', err)
-          })
+          logger.debug('App', 'Opening file:', result.path)
+          safeInvoke('open-file', result.path)
         }
       }
     }
@@ -461,6 +565,12 @@ function App() {
           </div>
         )}
       </div>
+
+      <ScriptsmithModal
+        isOpen={showScriptsmith}
+        onClose={() => setShowScriptsmith(false)}
+        initialPrompt={scriptsmithPrompt}
+      />
     </div>
   )
 }

@@ -315,4 +315,6 @@ function Onboarding({ onComplete }) {
     )
 }
 
+Onboarding.displayName = 'Onboarding'
+
 export default Onboarding

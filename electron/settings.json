@@ -6,7 +6,6 @@
   "selectedApps": [],
   "theme": "light",
   "windowPosition": "center",
-  "resultDensity": "comfortable",
   "fileExclusions": [
     "**/node_modules",
     "**/dist",
@@ -47,5 +46,8 @@
       "url": "https://reddit.com/search?q=",
       "icon": "🤖"
     }
-  }
+  },
+  "resultDensity": "comfortable",
+  "googleApiKey": "",
+  "anthropicApiKey": ""
 }

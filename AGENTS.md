@@ -1,10 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to agentic coding agents working with the RAU codebase.
+Guidance for agentic coding agents working in RAU.
 
 ## Project Overview
 
-RAU is a macOS launcher (Spotlight alternative) built with Electron + React that provides unified search for applications, browser tabs, and files.
+RAU is a macOS launcher (Spotlight alternative) built with Electron + React. It provides unified search for applications, browser tabs, and files via Fuse.js fuzzy matching.
+
+**Tech Stack**: Electron 39, React 19, Vite 7, Tailwind CSS 4, Fuse.js 7
 
 ## Development Commands
 
@@ -12,23 +14,33 @@ RAU is a macOS launcher (Spotlight alternative) built with Electron + React that
 # Build and run (REQUIRED: build before start - Electron loads from dist/)
 npm run build          # Build React frontend to dist/
 npm start              # Run the Electron app
+npm run dev            # Build + run in one command
 
-# Development
-npm run dev            # Build and run in one command
-npm run dev:vite       # Vite dev server only (frontend iteration)
+# Development (frontend only)
+npm run dev:vite       # Vite dev server (HMR for frontend iteration)
 
-# Testing
-npm test               # Core search tests (tests/search.test.js)
-npm run test:tabs      # Tab fetcher tests (tests/tabFetcher.test.js)
-npm run test:unified   # Unified search tests (tests/unifiedSearch.test.js)
-npm run test:all       # All tests: node --test tests/*.test.js
+# Testing (Node.js built-in test runner)
+npm test               # tests/search.test.js
+npm run test:tabs      # tests/tabFetcher.test.js
+npm run test:unified   # tests/unifiedSearch.test.js
+npm run test:all       # All: node --test tests/*.test.js
 
-# Single test file execution:
+# Single test file:
 node --test tests/unifiedSearch.test.js
+
+# Single test case (use --test-name-pattern):
+node --test --test-name-pattern="Can detect math" tests/unifiedSearch.test.js
 
 # Distribution
 npm run dist:mac       # Build distributable macOS app
 ```
+
+## Architecture
+
+**Process Separation** (Electron IPC):
+- **Main Process** (`electron/`): Node.js runtime, system access, IPC handlers
+- **Renderer Process** (`src/`): React UI, communicates via `ipcRenderer.invoke()`
+- **Preload** (`electron/main-process/preload.js`): Secure bridge with context isolation
 
 ## Code Style Guidelines
 
@@ -43,11 +55,13 @@ npm run dist:mac       # Build distributable macOS app
 import React, { useState, useCallback } from 'react'
 import SearchBar from './components/SearchBar'
 import { searchUnified } from './services/unifiedSearch'
+import { safeInvoke } from './utils/ipc' // Use safeInvoke for IPC calls
 
 // ✅ Backend (Electron main process)
 const { app, BrowserWindow } = require('electron')
 const { execFile } = require('child_process')
 const logger = require('./main-process/logger')
+const { success, error } = require('../shared/utils/ipcResponse')
 ```
 
 ### Error Handling
@@ -64,21 +78,18 @@ if (!validation.valid) {
 }
 
 // ✅ Safe process execution
-execFile('mdfind', ['-name', sanitizedQuery], { timeout: 1000 }, (error, stdout) => {
-  if (error) {
-    logger.error('[Handler] Operation failed:', error)
-    return resolve([])
+execFile('mdfind', ['-name', sanitizedQuery], { timeout: 1000 }, (err, stdout) => {
+  if (err) {
+    logger.error('[Handler] Operation failed:', err)
+    return resolve(error(err)) // Use error() helper
   }
   // Process results...
 })
 
-// ✅ Async error handling
-try {
-  const results = await searchUnified(query, filters)
-  return results
-} catch (error) {
-  logger.error('[Service] Search failed:', error)
-  return []
+// ✅ Async error handling (Frontend)
+const results = await safeInvoke('search-unified', query, filters)
+if (results) {
+  // Process results
 }
 ```
 

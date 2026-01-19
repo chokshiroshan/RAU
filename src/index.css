@@ -284,7 +284,8 @@ body,
   /* Needed for width transition, but add padding to prevent clipping hover effects */
   overflow: hidden;
   padding: 0.25rem;
-  margin: -0.25rem; /* Compensate for padding to maintain layout position */
+  margin: -0.25rem;
+  /* Compensate for padding to maintain layout position */
   transition:
     opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -491,6 +492,21 @@ body,
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.125rem;
+}
+
+.result-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  margin-left: 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Browser Badge for Tabs - simplified neutral design */
@@ -1697,4 +1713,343 @@ body,
 .settings-bang-item:focus-within {
   background: var(--bg-selected) !important;
   border-color: var(--border-default) !important;
+}
+
+/* =====================================================
+   Scriptsmith Modal
+   ===================================================== */
+
+.scriptsmith-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+.scriptsmith-modal {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  animation: slideUp var(--duration-normal) var(--ease-spring);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.scriptsmith-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.scriptsmith-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.scriptsmith-title svg {
+  color: var(--accent);
+}
+
+.scriptsmith-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.scriptsmith-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
+.scriptsmith-no-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  gap: 1rem;
+}
+
+.scriptsmith-no-key svg {
+  color: var(--text-tertiary);
+  margin-bottom: 0.5rem;
+}
+
+.scriptsmith-no-key h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.scriptsmith-no-key p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.scriptsmith-settings-btn {
+  margin-top: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.scriptsmith-settings-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.scriptsmith-input-section {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scriptsmith-input-section label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.scriptsmith-input-section textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.scriptsmith-input-section textarea:focus {
+  border-color: var(--accent);
+}
+
+.scriptsmith-input-section textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.scriptsmith-generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.scriptsmith-generate-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.scriptsmith-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scriptsmith-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scriptsmith-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 0.8125rem;
+}
+
+.scriptsmith-result {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.scriptsmith-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.scriptsmith-metadata strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.scriptsmith-metadata span {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.scriptsmith-code-container {
+  flex: 1;
+  min-height: 0;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.scriptsmith-code {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.3);
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.scriptsmith-code code {
+  color: inherit;
+  font-family: inherit;
+}
+
+.scriptsmith-actions {
+  display: flex;
+  gap: 0.625rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.scriptsmith-copy-btn,
+.scriptsmith-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.scriptsmith-copy-btn {
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.scriptsmith-copy-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.scriptsmith-save-btn {
+  border: none;
+  background: #22c55e;
+  color: white;
+  flex: 1;
+}
+
+.scriptsmith-save-btn:hover:not(:disabled) {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.scriptsmith-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scriptsmith-status {
+  margin: 0 1.25rem 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.scriptsmith-status.success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.scriptsmith-status.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }

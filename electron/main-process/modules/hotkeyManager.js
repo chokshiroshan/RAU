@@ -28,6 +28,7 @@ function setToggleCallback(callback) {
 function registerHotkey(hotkey = DEFAULT_HOTKEY) {
   const success = globalShortcut.register(hotkey, () => {
     logger.log(`[Hotkey] ${hotkey} triggered`)
+
     if (toggleCallback) {
       toggleCallback().catch(err => logger.error('[Hotkey] Error:', err))
     }
@@ -66,3 +67,4 @@ module.exports = {
   setToggleCallback,
   DEFAULT_HOTKEY,
 }
+

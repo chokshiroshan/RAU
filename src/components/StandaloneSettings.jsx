@@ -187,4 +187,6 @@ function StandaloneSettings({ onClose }) {
   )
 }
 
+StandaloneSettings.displayName = 'StandaloneSettings'
+
 export default StandaloneSettings

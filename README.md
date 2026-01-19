@@ -8,6 +8,8 @@ A lightning-fast macOS launcher built with Electron + React. Search and open app
 
 - **🚀 Lightning Fast**: Instant search across apps, tabs, and files
 - **📱 Multi-Source**: Unified search for applications, browser tabs, and files
+- **🤖 Scriptsmith AI**: Generate AppleScript automations with `/gen`
+- **🔌 Plugins**: Extend functionality with custom `.applescript` plugins
 - **⌨️ Keyboard-First**: Complete keyboard navigation and shortcuts
 - **🖥️ Multi-Monitor**: Appears on the active screen with smart positioning
 - **🌐 Browser Support**: Safari, Chrome, Brave, Arc, Comet, and Terminal tabs
@@ -46,6 +48,11 @@ npm start
 - **Math**: Type expressions (e.g., "2+2", "10*5")
 - **Commands**: "sleep", "lock", "restart", "empty trash"
 - **Web**: "g query" for Google search fallback
+
+### 🤖 AI & Extensions
+- **Scriptsmith**: Type `/gen open spotify and play weekly discovery` to generate automation scripts
+- **Plugins**: Add `.applescript` files to `~/Documents/RAU/plugins` to create custom commands
+
 
 ## 🛠️ Development
 
