@@ -4,6 +4,20 @@ import { logger } from '../utils/logger'
 
 const pendingIconRequests = new Set()
 
+const BROWSER_PATHS = {
+  'Safari': '/Applications/Safari.app',
+  'Google Chrome': '/Applications/Google Chrome.app',
+  'Chrome': '/Applications/Google Chrome.app',
+  'Arc': '/Applications/Arc.app',
+  'Brave Browser': '/Applications/Brave Browser.app',
+  'Brave': '/Applications/Brave Browser.app',
+  'Firefox': '/Applications/Firefox.app',
+  'Microsoft Edge': '/Applications/Microsoft Edge.app',
+  'Edge': '/Applications/Microsoft Edge.app',
+  'Orion': '/Applications/Orion.app',
+  'Vivaldi': '/Applications/Vivaldi.app'
+}
+
 function ResultsList({ results, selectedIndex, onSelect, onHover }) {
   const listRef = useRef(null)
   const [icons, setIcons] = useState(new Map())
@@ -32,12 +46,18 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     const loadAppIcons = async () => {
       if (!ipcRenderer) return
 
-      const resultsToProcess = results.filter(result =>
-        result.type === 'app' &&
-        !result.icon &&
-        !icons.has(result.path) &&
-        !pendingIconRequests.has(result.path)
-      )
+      // Identify items needing icons: Apps and Group Headers
+      const resultsToProcess = results.filter(result => {
+        // Case 1: App result without icon
+        if (result.type === 'app' && !result.icon && !icons.has(result.path) && !pendingIconRequests.has(result.path)) {
+            return true
+        }
+        // Case 2: Group Header (Browser) without icon
+        if (result._isGroupStart && !icons.has(result._groupName) && !pendingIconRequests.has(result._groupName)) {
+            return true
+        }
+        return false
+      })
 
       for (let i = 0; i < resultsToProcess.length; i += BATCH_SIZE) {
         if (isCancelled) return
@@ -47,17 +67,29 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
         await Promise.all(batch.map(async (result) => {
           if (isCancelled) return
 
-          pendingIconRequests.add(result.path)
+          // Determine path and key
+          let path = result.path
+          let key = result.path
+          
+          if (result._isGroupStart) {
+              // Map group name to browser path
+              path = BROWSER_PATHS[result._groupName] || `/Applications/${result._groupName}.app`
+              key = result._groupName
+          }
+
+          if (!path) return // Should not happen for apps, might for unknown groups
+
+          pendingIconRequests.add(key)
 
           try {
-            const icon = await ipcRenderer.invoke('get-app-icon', result.path)
+            const icon = await ipcRenderer.invoke('get-app-icon', path)
             if (icon && !isCancelled) {
-              setIcons(prev => new Map(prev).set(result.path, icon))
+              setIcons(prev => new Map(prev).set(key, icon))
             }
           } catch (error) {
-            logger.error('ResultsList', 'Error loading app icon', error)
+            // Silent fail for icons
           } finally {
-            pendingIconRequests.delete(result.path)
+            pendingIconRequests.delete(key)
           }
         }))
       }
@@ -74,11 +106,17 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
     return null
   }
 
-  const resultsWithIcons = results.map(result =>
-    result.type === 'app' && icons.has(result.path)
-      ? { ...result, icon: icons.get(result.path) }
-      : result
-  )
+  const resultsWithIcons = results.map(result => {
+    // Attach icon to App
+    if (result.type === 'app' && icons.has(result.path)) {
+        return { ...result, icon: icons.get(result.path) }
+    }
+    // Attach icon to Group Header
+    if (result._isGroupStart && icons.has(result._groupName)) {
+        return { ...result, _groupIcon: icons.get(result._groupName) }
+    }
+    return result
+  })
 
   return (
     <div className="results-list" ref={listRef}>
@@ -137,7 +175,7 @@ function ResultsList({ results, selectedIndex, onSelect, onHover }) {
                     <div className="group-header">
                         <span className="group-icon">
                             {item._groupIcon ? (
-                                <img src={item._groupIcon} alt="" />
+                                <img src={item._groupIcon} alt="" className="group-app-icon-img" />
                             ) : (
                                 <span className="icon-fallback">📂</span>
                             )}

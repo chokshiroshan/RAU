@@ -6,7 +6,7 @@
 // Window dimensions
 const WINDOW_WIDTH = 1000
 const WINDOW_HEIGHT = 1000
-const WINDOW_HEIGHT_COLLAPSED = 62 // Just the search bar (no results)
+const WINDOW_HEIGHT_COLLAPSED = 160 // Increased to prevent clipping
 const WINDOW_TOP_OFFSET = 80 // Distance from top of screen (like Spotlight)
 
 // Settings window dimensions

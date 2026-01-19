@@ -3,32 +3,32 @@
  * Provides web search fallback and bang prefix support
  */
 
-// Search engine definitions
-const SEARCH_ENGINES = {
+// Default fallbacks if no settings provided
+const DEFAULT_ENGINES = {
     g: { name: 'Google', url: 'https://google.com/search?q=', icon: '🔍' },
-    w: { name: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Special:Search/', icon: '📚' },
-    yt: { name: 'YouTube', url: 'https://youtube.com/results?search_query=', icon: '▶️' },
-    gh: { name: 'GitHub', url: 'https://github.com/search?q=', icon: '🐙' },
-    so: { name: 'Stack Overflow', url: 'https://stackoverflow.com/search?q=', icon: '📋' },
-    r: { name: 'Reddit', url: 'https://reddit.com/search?q=', icon: '🤖' },
     default: { name: 'Google', url: 'https://google.com/search?q=', icon: '🔍' },
 }
-
-// Regex to match bang prefixes like "g ", "yt ", etc.
-const BANG_REGEX = /^(g|w|yt|gh|so|r)\s+(.+)$/i
 
 /**
  * Check if query starts with a bang prefix
  * @param {string} query - Search query
+ * @param {Object} customBangs - Dictionary of bang definitions
  * @returns {Object|null} Bang info with engine and search term, or null
  */
-export function parseBangQuery(query) {
-    const match = query.match(BANG_REGEX)
+export function parseBangQuery(query, customBangs = {}) {
+    // Match "bang term" -> group 1: bang, group 2: term
+    const match = query.match(/^([a-zA-Z0-9]+)\s+(.+)$/)
+    
     if (match) {
         const prefix = match[1].toLowerCase()
         const searchTerm = match[2].trim()
-        const engine = SEARCH_ENGINES[prefix]
-        return { engine, searchTerm, prefix }
+        
+        // Check if prefix exists in provided bangs or defaults
+        const engine = customBangs[prefix] || DEFAULT_ENGINES[prefix]
+        
+        if (engine) {
+            return { engine, searchTerm, prefix }
+        }
     }
     return null
 }
@@ -37,10 +37,11 @@ export function parseBangQuery(query) {
  * Get a web search result for the query
  * @param {string} query - Search query
  * @param {boolean} isFallback - Whether this is a fallback (no local results)
+ * @param {Object} customBangs - Dictionary of bang definitions
  * @returns {Object} Web search result object
  */
-export function getWebSearchResult(query, isFallback = false) {
-    const bangInfo = parseBangQuery(query)
+export function getWebSearchResult(query, isFallback = false, customBangs = {}) {
+    const bangInfo = parseBangQuery(query, customBangs)
 
     if (bangInfo) {
         // Bang prefix detected
@@ -56,7 +57,7 @@ export function getWebSearchResult(query, isFallback = false) {
     }
 
     // Default fallback to Google
-    const engine = SEARCH_ENGINES.default
+    const engine = DEFAULT_ENGINES.default
     return {
         type: 'web-search',
         name: isFallback
@@ -73,10 +74,11 @@ export function getWebSearchResult(query, isFallback = false) {
 /**
  * Check if query is a bang search (starts with bang prefix)
  * @param {string} query - Search query
+ * @param {Object} customBangs - Dictionary of bang definitions
  * @returns {boolean}
  */
-export function isBangSearch(query) {
-    return BANG_REGEX.test(query)
+export function isBangSearch(query, customBangs = {}) {
+    return parseBangQuery(query, customBangs) !== null
 }
 
 export default {

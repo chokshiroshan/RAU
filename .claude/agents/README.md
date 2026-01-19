@@ -4,11 +4,12 @@ This directory contains specialized AI agents designed to handle specific aspect
 
 ## Agent Architecture Overview
 
-The ContextSearch agent system is organized into three tiers:
+The ContextSearch agent system is organized into four tiers:
 
-1. **Core Architecture Agents** - Handle fundamental system components
-2. **Feature Development Agents** - Manage specific feature implementations  
-3. **Infrastructure Agents** - Oversee cross-cutting concerns
+1. **Product & Strategy Agents** - Drive product vision and specifications
+2. **Core Architecture Agents** - Handle fundamental system components
+3. **Feature Development Agents** - Manage specific feature implementations  
+4. **Infrastructure Agents** - Oversee cross-cutting concerns
 
 ## Available Agents
 
@@ -45,6 +46,13 @@ The ContextSearch agent system is organized into three tiers:
 **File**: `testing-quality-agent.md`
 - **Specialization**: Testing strategy, test development, quality assurance
 - **Use for**: Unit/integration testing, mock design, performance testing, CI/CD
+
+### Product & Strategy Agents
+
+#### **💡 Brainstormer Agent**
+**File**: `brainstormer.md`
+- **Specialization**: Product specs, feature ideation, roadmap planning
+- **Use for**: Writing PRDs, brainstorming features, prioritization, tradeoff analysis
 
 ### Infrastructure Agents
 
@@ -102,6 +110,13 @@ Consider: Testing Quality Agent (performance testing)
 Primary: Build Deploy Agent (build configuration)
 Secondary: Security Audit Agent (code signing, security)
 Consider: Performance Agent (build performance)
+```
+
+#### Planning a New Feature
+```
+Primary: Brainstormer Agent (spec, user stories, prioritization)
+Secondary: Relevant Dev Agent (technical feasibility)
+Consider: Testing Quality Agent (acceptance criteria validation)
 ```
 
 ## Agent Characteristics

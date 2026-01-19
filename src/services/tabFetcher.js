@@ -254,27 +254,35 @@ async function getArcTabs() {
   }))
 }
 
+const DEDICATED_BROWSER_APPS = new Set([
+  'safari', 'google chrome', 'chrome', 'brave browser', 'brave', 'comet', 'arc', 'terminal'
+])
+
 /**
  * Get enhanced windows from ALL visible applications using native window discovery
  * Combines fast Core Graphics enumeration with app-specific tab/document discovery
+ * @param {Array} selectedApps - Selected apps list
+ * @param {Set} skipApps - Apps already fetched by dedicated scripts (normalized lowercase)
  * @returns {Promise<Array>} Array of enhanced window objects
  */
-async function getUniversalWindows(selectedApps = []) {
+async function getUniversalWindows(selectedApps = [], skipApps = new Set()) {
   try {
-    // Get fast window enumeration using Core Graphics
     const systemWindows = await getSystemWindows({ selectedApps })
     
-    // Enhance with app-specific data where possible
     const enhancedWindows = await Promise.all(
       systemWindows.map(async (window) => {
+        const normalizedAppName = normalizeAppName(window.appName)
+        
+        if (skipApps.has(normalizedAppName)) {
+          return null
+        }
+        
         const capability = getAppCapability(window.appName)
         
-        // If app supports tabs, try to get detailed tab information
         if (capability.tabs) {
           try {
             const detailedData = await getAppSpecificData(window.appName, selectedApps)
             if (detailedData && detailedData.length > 0) {
-              // Merge system window data with detailed app data
               return detailedData.map(detail => ({
                 ...window,
                 ...detail,
@@ -287,7 +295,6 @@ async function getUniversalWindows(selectedApps = []) {
           }
         }
         
-        // Return basic window info for non-tab apps
         return {
           ...window,
           type: capability.documents ? 'document' : 'window',
@@ -296,8 +303,7 @@ async function getUniversalWindows(selectedApps = []) {
       })
     )
     
-    // Flatten the results (some apps return multiple tabs/windows)
-    const flattenedWindows = enhancedWindows.flat()
+    const flattenedWindows = enhancedWindows.flat().filter(Boolean)
     
     safeLog(`[TabFetcher] Enhanced universal windows: found ${flattenedWindows.length} items from ${new Set(flattenedWindows.map(w => w.appName)).size} apps`)
     return flattenedWindows
@@ -467,7 +473,20 @@ async function refreshTabs(options = {}) {
     try {
       const shouldFetch = (appName) => isAppSelected(appName, selectedApps)
 
-      // Fetch tabs from dedicated browsers AND enhanced universal windows in parallel
+      const dedicatedFetchedApps = new Set()
+      if (shouldFetch('Safari')) dedicatedFetchedApps.add('safari')
+      if (shouldFetch('Google Chrome') || shouldFetch('Chrome')) {
+        dedicatedFetchedApps.add('google chrome')
+        dedicatedFetchedApps.add('chrome')
+      }
+      if (shouldFetch('Brave Browser') || shouldFetch('Brave')) {
+        dedicatedFetchedApps.add('brave browser')
+        dedicatedFetchedApps.add('brave')
+      }
+      if (shouldFetch('Comet')) dedicatedFetchedApps.add('comet')
+      if (shouldFetch('Arc')) dedicatedFetchedApps.add('arc')
+      if (shouldFetch('Terminal')) dedicatedFetchedApps.add('terminal')
+
       const [safariTabs, chromeTabs, braveTabs, cometTabs, arcTabs, terminalTabs, enhancedWindows] = await Promise.all([
         shouldFetch('Safari') ? getSafariTabs() : Promise.resolve([]),
         shouldFetch('Google Chrome') || shouldFetch('Chrome') ? getChromeTabs() : Promise.resolve([]),
@@ -475,7 +494,7 @@ async function refreshTabs(options = {}) {
         shouldFetch('Comet') ? getCometTabs() : Promise.resolve([]),
         shouldFetch('Arc') ? getArcTabs() : Promise.resolve([]),
         shouldFetch('Terminal') ? getTerminalTabs() : Promise.resolve([]),
-        getUniversalWindows(selectedApps),
+        getUniversalWindows(selectedApps, dedicatedFetchedApps),
       ])
 
       // Combine all tabs, windows, and documents
@@ -746,9 +765,11 @@ async function activateTab(tab) {
       script = `
         tell application "Safari"
           activate
+          delay 0.3
           try
             tell window ${windowIndex} to set current tab to tab ${tabIndex}
             set index of window ${windowIndex} to 1
+            delay 0.1
           end try
         end tell
       `
@@ -757,9 +778,11 @@ async function activateTab(tab) {
       script = `
         tell application "Terminal"
           activate
+          delay 0.3
           try
             set selected tab of window ${windowIndex} to tab ${tabIndex}
             set index of window ${windowIndex} to 1
+            delay 0.1
           end try
         end tell
       `
@@ -779,6 +802,7 @@ async function activateTab(tab) {
       script = `
         tell application "${appName}"
           activate
+          delay 0.3
           set targetUrl to "${targetUrl}"
           set found to false
           
@@ -789,12 +813,14 @@ async function activateTab(tab) {
                if URL of t is targetUrl then
                   set active tab index of window ${windowIndex} to ${tabIndex}
                   set index of window ${windowIndex} to 1
+                  delay 0.1
                   return "success"
                end if
             else
                -- No URL to verify, just trust index
                set active tab index of window ${windowIndex} to ${tabIndex}
                set index of window ${windowIndex} to 1
+               delay 0.1
                return "success"
             end if
           end try
@@ -810,6 +836,7 @@ async function activateTab(tab) {
                 if URL of t is targetUrl then
                   set active tab index of window i to j
                   set index of window i to 1
+                  delay 0.1
                   return "success_search"
                 end if
               end repeat
@@ -827,6 +854,7 @@ async function activateTab(tab) {
         const targetWindow = validatePositiveInt(tab.windowIndex) || 1
         script = `
           tell application "${safeBrowserName}" to activate
+          delay 0.3
           tell application "System Events"
             tell process "${safeBrowserName}"
               set frontmost to true
@@ -835,9 +863,13 @@ async function activateTab(tab) {
               end try
             end tell
           end tell
+          delay 0.1
         `
       } else {
-        script = `tell application "${safeBrowserName}" to activate`
+        script = `
+          tell application "${safeBrowserName}" to activate
+          delay 0.3
+        `
       }
   }
 

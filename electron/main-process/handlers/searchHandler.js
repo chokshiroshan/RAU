@@ -8,6 +8,7 @@ const { execFile } = require('child_process')
 const {
   validateSearchQuery,
 } = require('../../../shared/validation/validators')
+const { getSettings } = require('../config')
 const logger = require('../logger')
 
 /**
@@ -21,9 +22,13 @@ async function searchFiles(_event, query) {
   }
 
   const sanitizedQuery = validation.value
+  const settings = getSettings()
+  const exclusions = settings.fileExclusions || []
 
   return new Promise((resolve) => {
-    execFile('mdfind', ['-name', sanitizedQuery, '-limit', '100'],
+    // Use standard -name for reliable filename search
+    // We request more results (200) to allow for exclusion filtering
+    execFile('mdfind', ['-name', sanitizedQuery, '-limit', '200'],
       { timeout: 1000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout) => {
         if (error) {
           if (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
@@ -35,9 +40,20 @@ async function searchFiles(_event, query) {
           return
         }
 
-        const results = stdout
-          .split('\n')
-          .filter(line => line.trim() !== '')
+        const rawResults = stdout.split('\n').filter(line => line.trim() !== '')
+        
+        // Post-process filtering for exclusions
+        const filteredResults = rawResults.filter(filePath => {
+            for (const exclusion of exclusions) {
+                const cleanEx = exclusion.replace(/^\*\*\/|\*\*$/g, '')
+                if (filePath.includes(cleanEx)) {
+                    return false
+                }
+            }
+            return true
+        })
+
+        const results = filteredResults
           .slice(0, 100)
           .map(filePath => ({
             path: filePath,

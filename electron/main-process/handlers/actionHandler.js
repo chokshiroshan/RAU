@@ -80,13 +80,35 @@ function isRunnableApp(appPath) {
     }
   }
 
-  // Exclude non-runnable system services and background agents
+  const appName = path.basename(appPath, '.app').toLowerCase()
+  const excludeKeywords = [
+    'helper', 'service', 'daemon', 'agent', 'plugin', 'updater',
+    'installer', 'uninstaller', 'crashreporter', 'renderer', 'gpu process'
+  ]
+  
+  const matchedKeyword = excludeKeywords.find(keyword => appName.includes(keyword))
+  if (matchedKeyword) {
+    logger.log(`[ActionHandler] Filtered out: "${appName}" (matched: ${matchedKeyword})`)
+    return false
+  }
+
+  // Exclude apps nested inside other app bundles (Helpers, Frameworks, etc.)
+  if (appPath.match(/\.app\/Contents\//)) {
+    return false
+  }
+
   const excludePatterns = [
     '/System/Library/CoreServices/',
     '/System/Library/PrivateFrameworks/',
     '/System/Library/Services/',
     '/System/Library/Assistant/',
     '/usr/libexec/',
+    '/Library/Application Support/',
+    '/Library/Printers/',
+    '/Library/QuickLook/',
+    '/Library/Spotlight/',
+    '/Library/Caches/',
+    '/Library/Frameworks/',
   ]
 
   // Include patterns for legitimate apps
@@ -383,6 +405,12 @@ function saveSettingsHandler(_event, settings) {
   return saveSettings(settings)
 }
 
+function clearAppsCache() {
+  appsCache = null
+  appsCacheTimestamp = 0
+  logger.log('[ActionHandler] Apps cache cleared')
+}
+
 module.exports = {
   setMainWindow,
   openFile,
@@ -395,4 +423,5 @@ module.exports = {
   openUrl,
   getSettings: getSettingsHandler,
   saveSettings: saveSettingsHandler,
+  clearAppsCache,
 }

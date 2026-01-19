@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openApp: (appPath) => ipcRenderer.invoke('open-app', appPath),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  clearAppsCache: () => ipcRenderer.invoke('clear-apps-cache'),
   executeCommand: (action) => ipcRenderer.invoke('execute-command', action),
   openUrl: (url) => ipcRenderer.invoke('open-url', url),
 

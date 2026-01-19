@@ -26,12 +26,48 @@ function App() {
     commands: true
   })
   const searchTimeoutRef = useRef(null)
+  const searchIdRef = useRef(0)
   const inputRef = useRef(null)
   const resultsContainerRef = useRef(null)
+  const settingsButtonRef = useRef(null)
   const hasQuery = query.trim().length > 0
   const [isExiting, setIsExiting] = useState(false)
   const [windowHeight, setWindowHeight] = useState(62) // Collapsed by default
   const [showSettings, setShowSettings] = useState(false)
+  const [appSettings, setAppSettings] = useState({})
+  
+  // Navigation mode tracking: prevents mouse hover from changing selection during keyboard navigation
+  const isKeyboardNavigatingRef = useRef(false)
+  const lastMousePositionRef = useRef({ x: 0, y: 0 })
+
+  const loadSettings = useCallback(async () => {
+    if (!ipcRenderer) return
+    try {
+      const settings = await ipcRenderer.invoke('get-settings')
+      setAppSettings(settings)
+      
+      // Apply theme
+      const theme = settings.theme || 'system'
+      document.documentElement.classList.remove('theme-light', 'theme-dark')
+      if (theme !== 'system') {
+        document.documentElement.classList.add(`theme-${theme}`)
+      }
+    } catch (err) {
+      logger.error('App', 'Failed to load settings', err)
+    }
+  }, [])
+
+  // Load settings on mount
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
+
+  // Reload settings when settings panel closes
+  useEffect(() => {
+    if (!showSettings) {
+      loadSettings()
+    }
+  }, [showSettings, loadSettings])
 
   // Keep window fully expanded during onboarding so content isn't clipped
   useEffect(() => {
@@ -72,36 +108,42 @@ function App() {
     }
   }, [])
 
-  // Debounced search
-  const performSearch = useCallback(async (searchQuery, activeFilters) => {
+  // Debounced search - pass cached settings to avoid IPC overhead per keystroke
+  const performSearch = useCallback(async (searchQuery, activeFilters, settings) => {
     if (!searchQuery || searchQuery.trim() === '') {
       setResults([])
       setSelectedIndex(0)
       return
     }
 
+    const currentSearchId = ++searchIdRef.current
     setIsLoading(true)
     try {
-      const searchResults = await searchUnified(searchQuery, activeFilters)
+      const searchResults = await searchUnified(searchQuery, activeFilters, settings)
+      if (searchIdRef.current !== currentSearchId) return
       const organizedResults = organizeResults(searchResults)
       setResults(organizedResults)
       setSelectedIndex(0)
     } catch (error) {
+      if (searchIdRef.current !== currentSearchId) return
       logger.error('App', 'Search error', error)
       setResults([])
     } finally {
-      setIsLoading(false)
+      if (searchIdRef.current === currentSearchId) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
   // Handle query change with debounce (150ms - faster response)
+  // Pass appSettings to avoid IPC overhead on every keystroke
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
     }
 
     searchTimeoutRef.current = setTimeout(() => {
-      performSearch(query, filters)
+      performSearch(query, filters, appSettings)
     }, 150)
 
     return () => {
@@ -109,7 +151,7 @@ function App() {
         clearTimeout(searchTimeoutRef.current)
       }
     }
-  }, [query, filters, performSearch])
+  }, [query, filters, appSettings, performSearch])
 
   // Close settings when query changes
   useEffect(() => {
@@ -123,8 +165,9 @@ function App() {
     if (showOnboarding) return
 
     // Simple fixed heights: collapsed or expanded
-    const COLLAPSED_HEIGHT = 92 // Search bar + padding + buffer
-    const EXPANDED_HEIGHT = 700 // Fixed height when showing results or settings
+    // Increased heights to prevent clipping of shadows and hover animations
+    const COLLAPSED_HEIGHT = 160 // Search bar + large padding
+    const EXPANDED_HEIGHT = 850 // Results/Settings + large padding
 
     const hasResults = hasQuery && (isLoading || results.length > 0)
     const needsExpanded = hasResults || showSettings
@@ -142,9 +185,68 @@ function App() {
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
+    // 1. Global Type-to-Search
+    // If user types a character and is NOT focused on an input, switch to search
+    const isChar = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey // Shift is fine for capitals, but usually e.key captures char
+    // Actually e.key handles capitals correctly. We want to avoid shortcuts.
+    const isModifier = e.ctrlKey || e.metaKey || e.altKey
+    
+    const activeEl = document.activeElement
+    const isInputFocused = activeEl && (
+      activeEl.tagName === 'INPUT' || 
+      activeEl.tagName === 'TEXTAREA' ||
+      activeEl.isContentEditable
+    )
+
+    // If typing a regular character outside of an input field
+    if (e.key.length === 1 && !isModifier && !isInputFocused) {
+        // If settings open, close it
+        if (showSettings) setShowSettings(false)
+        
+        // Focus search bar
+        inputRef.current?.focus()
+        
+        // We don't preventDefault() so the character is typed into the input
+        return
+    }
+
+    // If settings are open, let default behavior happen (scrolling)
+    // Only capture Escape to close
+    if (showSettings) {
+        if (e.key === 'Escape') {
+            e.preventDefault()
+            setShowSettings(false)
+        }
+        return
+    }
+
+    // 2. Region Navigation (Arrow Right/Left)
+    if (e.key === 'ArrowRight') {
+        // Move focus to filter bubbles if not already there
+        if (activeEl !== settingsButtonRef.current) {
+            // If in input, only hijack if empty. If typing, allow default (cursor move).
+            if (isInputFocused && query.length > 0) {
+                return
+            }
+            e.preventDefault()
+            settingsButtonRef.current?.focus()
+            return
+        }
+    }
+
+    if (e.key === 'ArrowLeft') {
+        // Move focus back to search input
+        if (activeEl === settingsButtonRef.current) {
+            e.preventDefault()
+            inputRef.current?.focus()
+            return
+        }
+    }
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
+        isKeyboardNavigatingRef.current = true
         setSelectedIndex(prev => {
           const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
           if (results.length === 0) return 0
@@ -155,6 +257,7 @@ function App() {
         break
       case 'ArrowUp':
         e.preventDefault()
+        isKeyboardNavigatingRef.current = true
         setSelectedIndex(prev => {
           const safePrev = isNaN(prev) || prev === undefined ? 0 : prev
           if (results.length === 0) return 0
@@ -164,6 +267,11 @@ function App() {
         })
         break
       case 'Enter':
+        // If settings button is focused, allow default action (click) and return
+        if (document.activeElement === settingsButtonRef.current) {
+            return
+        }
+
         e.preventDefault()
         if (results.length > 0 && results[selectedIndex]) {
           const result = results[selectedIndex]
@@ -236,6 +344,25 @@ function App() {
     }
   }, [results, selectedIndex])
 
+  // Handle mouse movement in results list - re-enables hover selection after keyboard navigation
+  const handleResultsMouseMove = useCallback((e) => {
+    const { clientX, clientY } = e
+    const { x: lastX, y: lastY } = lastMousePositionRef.current
+    
+    // Only switch to mouse mode if mouse actually moved (not just element scrolled under cursor)
+    if (clientX !== lastX || clientY !== lastY) {
+      lastMousePositionRef.current = { x: clientX, y: clientY }
+      isKeyboardNavigatingRef.current = false
+    }
+  }, [])
+
+  // Handle hover selection - only works when not in keyboard navigation mode
+  const handleResultHover = useCallback((index) => {
+    if (!isKeyboardNavigatingRef.current) {
+      setSelectedIndex(index)
+    }
+  }, [])
+
   // Handle result click - using invoke for proper response handling
   const handleResultClick = useCallback((index) => {
     if (results[index]) {
@@ -305,6 +432,7 @@ function App() {
 
           <div className={`filter-bubbles ${hasQuery ? 'hidden' : ''}`}>
             <button
+              ref={settingsButtonRef}
               className={`filter-bubble ${showSettings ? 'active' : ''}`}
               onClick={() => setShowSettings(!showSettings)}
               title="Settings"
@@ -323,12 +451,12 @@ function App() {
 
         {/* Detached Results List - hidden when settings is open */}
         {!showSettings && hasQuery && (isLoading || results.length > 0) && (
-          <div className="results-container" ref={resultsContainerRef}>
+          <div className="results-container" ref={resultsContainerRef} onMouseMove={handleResultsMouseMove}>
             <ResultsList
               results={results}
               selectedIndex={selectedIndex}
               onSelect={handleResultClick}
-              onHover={setSelectedIndex}
+              onHover={handleResultHover}
             />
           </div>
         )}

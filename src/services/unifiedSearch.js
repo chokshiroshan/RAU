@@ -2,6 +2,7 @@ import Fuse from 'fuse.js'
 import { searchFiles } from './fileSearch'
 import { getAllApps } from './appSearch'
 import { searchCommands } from './commandSearch'
+import * as browserCommander from './browserCommander'
 import { getWebSearchResult } from './webSearch'
 import { ipcRenderer } from './electron'
 import { logger } from '../utils/logger'
@@ -65,9 +66,10 @@ const fuseOptions = {
  * Search for apps, files, and tabs
  * @param {string} query - Search query
  * @param {Object} filters - Optional filters { apps: boolean, files: boolean, tabs: boolean, commands: boolean }
+ * @param {Object} cachedSettings - Optional pre-fetched settings to avoid IPC overhead
  * @returns {Promise<Array>} Combined array of app, file, and tab results
  */
-export async function searchUnified(query, filters) {
+export async function searchUnified(query, filters, cachedSettings = null) {
   const activeFilters = filters || { apps: true, files: true, tabs: true, commands: true }
   logger.debug('UnifiedSearch', 'Search started for query:', query, 'Filters:', activeFilters)
 
@@ -81,6 +83,26 @@ export async function searchUnified(query, filters) {
   if (trimmedQuery.length < 2) {
     logger.debug('UnifiedSearch', 'Query too short (< 2 chars), returning empty')
     return []
+  }
+
+  // Use cached settings if provided, otherwise fetch (fallback for direct calls)
+  let settings = cachedSettings
+  if (!settings) {
+    try {
+        if (ipcRenderer) {
+            settings = await ipcRenderer.invoke('get-settings')
+        }
+    } catch (e) {
+        logger.warn('UnifiedSearch', 'Failed to fetch settings', e)
+    }
+  }
+
+  // Check for bang search first
+  const customBangs = settings?.webBangs || {}
+  const bangInfo = getWebSearchResult(trimmedQuery, false, customBangs)
+  
+  if (bangInfo.priority === 10) {
+      return [bangInfo]
   }
 
   // Check for calculator expressions (basic math)
@@ -103,15 +125,10 @@ export async function searchUnified(query, filters) {
       return []
     }
 
-    logger.debug('UnifiedSearch', 'Fetching settings...')
-
-    // Get settings to determine which categories to search
-    const settings = await ipcRenderer.invoke('get-settings')
+    logger.debug('UnifiedSearch', 'Starting parallel searches...')
 
     // Build search promises based on settings AND component filters
     const searchPromises = []
-
-    logger.debug('UnifiedSearch', 'Starting parallel searches...')
 
     if (activeFilters.apps && settings && settings.searchApps !== false) {
       logger.debug('UnifiedSearch', 'App search enabled')
@@ -167,6 +184,9 @@ export async function searchUnified(query, filters) {
 
     logger.debug('UnifiedSearch', `Raw results - Apps: ${apps.length}, Files: ${fileResults.length}, Tabs: ${tabs.length}`)
 
+    // Check for Browser Action Commands (Close tabs, etc.)
+    const actionResults = browserCommander.searchActions(trimmedQuery, tabs)
+    
     // Add type indicator to app results with priority boost
     const appsWithType = apps.map(app => ({
       ...app,
@@ -229,7 +249,7 @@ export async function searchUnified(query, filters) {
     // If no results at all, show web search fallback
     if (finalResults.length === 0) {
       logger.debug('UnifiedSearch', 'No results, adding web search fallback')
-      return [getWebSearchResult(trimmedQuery, true)]
+      return [getWebSearchResult(trimmedQuery, true, customBangs)]
     }
 
     logger.debug('UnifiedSearch', `Final results: ${finalResults.length} items`)
@@ -274,4 +294,3 @@ export async function searchTabs(query) {
     return []
   }
 }
-

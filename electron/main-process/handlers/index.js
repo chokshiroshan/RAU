@@ -27,6 +27,7 @@ function registerHandlers(mainWindow) {
   ipcMain.handle('open-file', actionHandlers.openFile)
   ipcMain.handle('get-tabs', actionHandlers.getTabs)
   ipcMain.handle('activate-tab', actionHandlers.activateTab)
+  ipcMain.handle('close-tabs', actionHandlers.closeTabs)
   ipcMain.handle('get-apps', actionHandlers.getApps)
   ipcMain.handle('get-app-icon', actionHandlers.getAppIcon)
   ipcMain.handle('get-app-icon-by-name', actionHandlers.getAppIconByName)
@@ -34,6 +35,7 @@ function registerHandlers(mainWindow) {
   ipcMain.handle('open-url', actionHandlers.openUrl)
   ipcMain.handle('get-settings', actionHandlers.getSettings)
   ipcMain.handle('save-settings', actionHandlers.saveSettings)
+  ipcMain.handle('clear-apps-cache', actionHandlers.clearAppsCache)
 
   // System handlers
   ipcMain.handle('execute-command', systemHandlers.executeCommand)

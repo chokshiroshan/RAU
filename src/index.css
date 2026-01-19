@@ -55,7 +55,7 @@
 
   /* Height limits */
   --height-collapsed: 3.875rem;
-  --height-max: 37.5rem;
+  --height-max: 62.5rem;
 }
 
 * {
@@ -114,7 +114,8 @@ body,
   gap: 1.25rem;
   /* Remove overflow:hidden so shadows/focus rings aren't clipped */
   overflow: visible;
-  padding: 0.3125rem;
+  /* Increased padding to prevent clipping of shadows and hover states */
+  padding: 2.5rem 1.5rem 1.5rem 1.5rem;
   animation: windowEntrance var(--duration-entrance) var(--ease-spring);
 }
 
@@ -280,7 +281,10 @@ body,
 .filter-bubbles {
   display: flex;
   gap: 0.5rem;
+  /* Needed for width transition, but add padding to prevent clipping hover effects */
   overflow: hidden;
+  padding: 0.25rem;
+  margin: -0.25rem; /* Compensate for padding to maintain layout position */
   transition:
     opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -326,6 +330,15 @@ body,
 
 .filter-bubble:active {
   transform: scale(0.94);
+}
+
+.filter-bubble:focus-visible {
+  outline: none;
+  background: rgba(59, 130, 246, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  color: var(--accent);
+  transform: translateY(-1px);
 }
 
 /* DETACHED RESULTS LIST */
@@ -923,7 +936,11 @@ body,
 }
 
 .settings-content-inline {
-  padding: 0 0.25rem;
+  padding: 0 0.25rem 1rem 0.25rem;
+  max-height: 30rem;
+  overflow-y: auto;
+  /* Ensure it captures scroll events */
+  overscroll-behavior: contain;
 }
 
 /* Settings button in search bar */
@@ -1581,4 +1598,103 @@ body,
   .preview-window {
     transition: none;
   }
+}
+
+/* =====================================================
+   LIGHT THEME OVERRIDES
+   ===================================================== */
+
+:root.theme-light {
+  /* Neutral Palette */
+  --bg-primary: rgba(245, 245, 247, 0.95);
+  --bg-secondary: rgba(0, 0, 0, 0.04);
+  --bg-tertiary: rgba(0, 0, 0, 0.06);
+  --bg-selected: rgba(0, 0, 0, 0.08);
+
+  /* Text Hierarchy */
+  --text-primary: rgba(0, 0, 0, 0.88);
+  --text-secondary: rgba(0, 0, 0, 0.55);
+  --text-tertiary: rgba(0, 0, 0, 0.35);
+  --text-quaternary: rgba(0, 0, 0, 0.20);
+
+  /* Borders */
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.1);
+
+  /* Selection */
+  --selection-bg: rgba(59, 130, 246, 0.12);
+  --selection-border: rgba(59, 130, 246, 0.3);
+  --selection-text-primary: rgba(0, 0, 0, 0.95);
+  --selection-text-secondary: rgba(0, 0, 0, 0.75);
+
+  /* Glass surfaces */
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-bg-hover: rgba(255, 255, 255, 0.92);
+  --glass-bg-active: #ffffff;
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-border-strong: rgba(0, 0, 0, 0.15);
+  --text-shadow-subtle: none;
+}
+
+/* Ensure icons are visible in light mode */
+:root.theme-light .settings-toggle {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+:root.theme-light .settings-toggle:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+:root.theme-light .settings-toggle.active {
+  background: var(--accent);
+}
+
+:root.theme-light .settings-toggle-slider {
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* =====================================================
+   PREMIUM KEYBOARD NAVIGATION STYLES
+   ===================================================== */
+
+/* Highlight the entire row when any child has focus */
+.settings-item:focus-within {
+  background: var(--bg-selected);
+  /* Optional: Add a subtle border or glow */
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Specific Focus Rings for Controls */
+.settings-select:focus,
+.settings-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.settings-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-muted);
+}
+
+.settings-button-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-muted);
+  transform: translateY(-1px);
+}
+
+/* Delete buttons in lists */
+.settings-exclusion-tag button:focus,
+.settings-bang-item button:focus {
+  outline: none;
+  color: #ff3b30;
+  background: rgba(255, 59, 48, 0.15);
+  border-radius: 4px;
+}
+
+/* Bang item row highlight */
+.settings-bang-item:focus-within {
+  background: var(--bg-selected) !important;
+  border-color: var(--border-default) !important;
 }

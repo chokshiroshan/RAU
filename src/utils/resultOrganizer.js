@@ -56,9 +56,11 @@ export function organizeResults(results) {
   
   sortedGroups.forEach(group => {
       group.items.forEach((item, index) => {
+          // Ensure all items in group have the group name for correct rendering
+          item._groupName = group.appName
+          
           if (index === 0) {
               item._isGroupStart = true
-              item._groupName = group.appName
               item._groupIcon = group.icon
               item._groupCategory = group.category
               item._groupItemCount = group.items.length
