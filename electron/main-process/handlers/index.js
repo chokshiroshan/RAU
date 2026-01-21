@@ -5,12 +5,14 @@
 
 const { ipcMain } = require('electron')
 const searchHandlers = require('./searchHandler')
+const unifiedSearchHandlers = require('./unifiedSearchHandler')
 const actionHandlers = require('./actionHandler')
 const systemHandlers = require('./systemHandler')
 const windowHandlers = require('./windowHandler')
 const automationHandlers = require('./automationHandler')
 const scriptsmithHandlers = require('./scriptsmithHandler')
 const settingsWindow = require('../modules/settingsWindow')
+const scriptsmithWindow = require('../modules/scriptsmithWindow')
 const logger = require('../logger')
 
 /**
@@ -22,9 +24,11 @@ function registerHandlers(mainWindow) {
   actionHandlers.setMainWindow(mainWindow)
   systemHandlers.setMainWindow(mainWindow)
   settingsWindow.setGetMainWindowCallback(() => mainWindow)
+  scriptsmithWindow.setGetMainWindowCallback(() => mainWindow)
 
   // Search handlers
   ipcMain.handle('search-files', searchHandlers.searchFiles)
+  ipcMain.handle('search-unified', unifiedSearchHandlers.searchUnifiedHandler)
 
   // Automation handlers (Shortcuts & Plugins)
   try {
@@ -77,6 +81,20 @@ function registerHandlers(mainWindow) {
   ipcMain.handle('show-settings', () => {
     settingsWindow.openSettingsWindow()
     return true
+  })
+
+  // Scriptsmith window
+  ipcMain.handle('show-scriptsmith', (_event, prompt = '') => {
+    try {
+      scriptsmithWindow.openScriptsmithWindow(prompt)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.hide()
+      }
+      return true
+    } catch (error) {
+      logger.error('[Handlers] Failed to open Scriptsmith window:', error)
+      return false
+    }
   })
 
   // Scriptsmith handlers (AI Script Generation)

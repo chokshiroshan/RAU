@@ -73,7 +73,6 @@ function resizeWindow(_event, input) {
  */
 function hideWindow() {
   logger.log('[WindowHandler] hideWindow() IPC called')
-  logger.log('[WindowHandler] Stack trace:', new Error().stack)
   if (mainWindow && !mainWindow.isDestroyed()) {
     logger.log('[WindowHandler] HIDING window via IPC')
     mainWindow.hide()

@@ -1,8 +1,28 @@
-const { test, describe, mock } = require('node:test')
+const { test, describe } = require('node:test')
 const assert = require('node:assert')
+const proxyquire = require('proxyquire')
 
-// Mock the tabFetcher module
-const tabFetcher = require('../src/services/tabFetcher')
+const execFileMock = (command, args, options, callback) => {
+  const cb = typeof options === 'function' ? options : callback
+  const scriptArg = Array.isArray(args) ? args.join(' ') : ''
+  if (command === 'osascript' && scriptArg.includes('InvalidBrowser')) {
+    cb(new Error('Invalid browser'), '', '')
+    return
+  }
+  cb(null, '', '')
+}
+
+const tabFetcher = proxyquire('../electron/main-process/services/tabFetcher', {
+  child_process: { execFile: execFileMock },
+  './windowIndexer': {
+    getSystemWindows: async () => [],
+    clearCache: () => {},
+    getAppCapability: () => ({ category: 'universal', tabs: false, documents: false, paths: false }),
+    supportsTabs: () => false,
+    supportsDocuments: () => false,
+    APP_CAPABILITIES: {}
+  }
+})
 
 describe('Tab Fetcher Tests', () => {
   test('getAllTabs returns array of tab objects', async () => {

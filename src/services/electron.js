@@ -66,6 +66,7 @@ export const ipcRenderer = {
     const methodMap = {
       'open-file': 'openFile',
       'search-files': 'searchFiles',
+      'search-unified': 'searchUnified',
       'get-tabs': 'getTabs',
       'activate-tab': 'activateTab',
       'get-apps': 'getApps',
@@ -78,6 +79,7 @@ export const ipcRenderer = {
       'open-url': 'openUrl',
       'mark-onboarding-complete': 'markOnboardingComplete',
       'show-settings': 'showSettings',
+      'show-scriptsmith': 'showScriptsmith',
       'get-shortcuts': 'getShortcuts',
       'get-plugins': 'getPlugins',
       'run-shortcut': 'runShortcut',

@@ -127,6 +127,7 @@ function createWindow() {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        sandbox: true,
         preload: path.join(__dirname, '../preload.js'),
       },
     })
@@ -146,6 +147,16 @@ function createWindow() {
     // Surface renderer errors in main process logs
     mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
       logger.log(`[Renderer][${level}] ${message} (${sourceId}:${line})`)
+    })
+
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+      logger.warn('[Window] Blocked navigation to:', url)
+      event.preventDefault()
+    })
+
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      logger.warn('[Window] Blocked window open to:', url)
+      return { action: 'deny' }
     })
 
     // Handle render process crash - recreate window

@@ -3,7 +3,24 @@
  * Tests the integration of universal window indexing with existing tab fetching
  */
 
-const { getAllTabs, clearCache, getEnhancedApps } = require('../src/services/tabFetcher')
+const proxyquire = require('proxyquire')
+
+const execFileMock = (command, args, options, callback) => {
+  const cb = typeof options === 'function' ? options : callback
+  cb(null, '', '')
+}
+
+const { getAllTabs, clearCache, getEnhancedApps } = proxyquire('../electron/main-process/services/tabFetcher', {
+  child_process: { execFile: execFileMock },
+  './windowIndexer': {
+    getSystemWindows: async () => [],
+    clearCache: () => {},
+    getAppCapability: () => ({ category: 'universal', tabs: false, documents: false, paths: false }),
+    supportsTabs: () => false,
+    supportsDocuments: () => false,
+    APP_CAPABILITIES: {}
+  }
+})
 
 async function testEnhancedTabDiscovery() {
   console.log('\n=== Testing Enhanced Tab Discovery ===\n')

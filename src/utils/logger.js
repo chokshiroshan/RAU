@@ -10,8 +10,27 @@ const LOG_LEVELS = {
   ERROR: 3,
 }
 
-// Current log level - change to filter output
-const CURRENT_LOG_LEVEL = LOG_LEVELS.DEBUG
+const IS_DEV = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV
+
+function resolveLogLevel() {
+  try {
+    if (typeof window !== 'undefined') {
+      const override = window.__RAU_LOG_LEVEL || window.localStorage?.getItem('rau-log-level')
+      if (override) {
+        const level = String(override).toLowerCase()
+        if (level === 'debug') return LOG_LEVELS.DEBUG
+        if (level === 'info') return LOG_LEVELS.INFO
+        if (level === 'warn') return LOG_LEVELS.WARN
+        if (level === 'error') return LOG_LEVELS.ERROR
+      }
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+  return IS_DEV ? LOG_LEVELS.DEBUG : LOG_LEVELS.INFO
+}
+
+const CURRENT_LOG_LEVEL = resolveLogLevel()
 
 /**
  * Safe console.log wrapper that won't crash on EPIPE

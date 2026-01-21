@@ -17,11 +17,7 @@ const mockExecFile = (cmd, args, callback) => {
 // Mock child_process
 require('child_process').execFile = mockExecFile
 
-// Mock logger - this is the tricky part because the service requires it
-// We need to verify where the service imports logger from.
-// It uses: const { logger } = require('../logger');
-// The path is relative to electron/main-process/services/shortcutsService.js
-// So it resolves to electron/main-process/logger.js
+// Mock logger - shortcutsService imports it from electron/main-process/logger.js
 
 // We need to populate the cache for logger BEFORE requiring service
 const loggerPath = require.resolve('../electron/main-process/logger')
@@ -30,12 +26,10 @@ require.cache[loggerPath] = {
   filename: loggerPath,
   loaded: true,
   exports: {
-    logger: {
-      log: () => { },
-      error: () => { },
-      warn: () => { },
-      debug: () => { }
-    }
+    log: () => { },
+    error: () => { },
+    warn: () => { },
+    debug: () => { }
   }
 }
 
@@ -92,6 +86,6 @@ describe('ShortcutsService', () => {
     await shortcutsService.runShortcut('My Shortcut')
 
     assert.strictEqual(capturedArgs.cmd, 'shortcuts')
-    assert.deepStrictEqual(capturedArgs.args, ['run', 'My Shortcut'])
+    assert.deepStrictEqual(capturedArgs.args, ['run', '--', 'My Shortcut'])
   })
 })

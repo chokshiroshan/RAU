@@ -11,6 +11,36 @@ const path = require('path')
 // Log file location (in user's home directory)
 const LOG_FILE = path.join(require('os').homedir(), '.rau.log')
 
+const LOG_LEVELS = {
+  DEBUG: 0,
+  INFO: 1,
+  WARN: 2,
+  ERROR: 3,
+}
+
+function resolveLogLevel() {
+  const explicit = process.env.RAU_LOG_LEVEL || process.env.LOG_LEVEL
+  if (explicit) {
+    switch (explicit.toLowerCase()) {
+      case 'debug':
+        return LOG_LEVELS.DEBUG
+      case 'info':
+        return LOG_LEVELS.INFO
+      case 'warn':
+        return LOG_LEVELS.WARN
+      case 'error':
+        return LOG_LEVELS.ERROR
+      default:
+        return LOG_LEVELS.INFO
+    }
+  }
+  if (process.env.DEBUG) return LOG_LEVELS.DEBUG
+  if (process.env.NODE_ENV === 'development') return LOG_LEVELS.DEBUG
+  return LOG_LEVELS.INFO
+}
+
+const CURRENT_LOG_LEVEL = resolveLogLevel()
+
 // Track if streams are writable
 let stdoutWritable = true
 let stderrWritable = true
@@ -46,6 +76,7 @@ function writeToFile(level, args) {
  * Safe console.log replacement
  */
 function log(...args) {
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.INFO) return
   if (stdoutWritable) {
     try {
       console.log(...args)
@@ -58,10 +89,25 @@ function log(...args) {
   }
 }
 
+function debug(...args) {
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.DEBUG) return
+  if (stdoutWritable) {
+    try {
+      console.log(...args)
+    } catch {
+      stdoutWritable = false
+      writeToFile('DEBUG', args)
+    }
+  } else {
+    writeToFile('DEBUG', args)
+  }
+}
+
 /**
  * Safe console.error replacement
  */
 function error(...args) {
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.ERROR) return
   if (stderrWritable) {
     try {
       console.error(...args)
@@ -78,6 +124,7 @@ function error(...args) {
  * Safe console.warn replacement
  */
 function warn(...args) {
+  if (CURRENT_LOG_LEVEL > LOG_LEVELS.WARN) return
   if (stderrWritable) {
     try {
       console.warn(...args)
@@ -92,6 +139,7 @@ function warn(...args) {
 
 module.exports = {
   log,
+  debug,
   error,
   warn,
 }

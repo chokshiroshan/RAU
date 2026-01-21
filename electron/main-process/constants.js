@@ -13,6 +13,10 @@ const WINDOW_TOP_OFFSET = 80 // Distance from top of screen (like Spotlight)
 const SETTINGS_WINDOW_WIDTH = 450
 const SETTINGS_WINDOW_HEIGHT = 400
 
+// Scriptsmith window dimensions
+const SCRIPTSMITH_WINDOW_WIDTH = 900
+const SCRIPTSMITH_WINDOW_HEIGHT = 720
+
 // Blur delay (prevents accidental closes during rapid interactions)
 const BLUR_DELAY_MS = 100
 
@@ -37,6 +41,8 @@ module.exports = {
   WINDOW_TOP_OFFSET,
   SETTINGS_WINDOW_WIDTH,
   SETTINGS_WINDOW_HEIGHT,
+  SCRIPTSMITH_WINDOW_WIDTH,
+  SCRIPTSMITH_WINDOW_HEIGHT,
 
   // Timing
   BLUR_DELAY_MS,

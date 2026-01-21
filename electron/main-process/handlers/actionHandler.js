@@ -15,7 +15,7 @@ const {
   sanitizeMdfindQuery,
 } = require('../../../shared/validation/validators')
 const { extractIconWithTimeout } = require('../services/iconExtractor')
-const { getAllTabs, activateTabWithRetry } = require('../../../src/services/tabFetcher')
+const { getAllTabs, activateTabWithRetry } = require('../services/tabFetcher')
 const { getSettings, saveSettings } = require('../config')
 const logger = require('../logger')
 

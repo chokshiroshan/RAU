@@ -71,7 +71,7 @@ The search engine orchestrates parallel queries to multiple sources:
 
 Results are aggregated, ranked (Fuse.js), and displayed in a virtualized list (`ResultsList.jsx`).
 
-### 2. Tab Fetcher (`src/services/tabFetcher.js`)
+### 2. Tab Fetcher (`electron/main-process/services/tabFetcher.js`)
 A sophisticated module that:
 - Detects running browsers.
 - Executes optimized AppleScript to fetch tabs.

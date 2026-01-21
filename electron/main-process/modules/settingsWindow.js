@@ -45,12 +45,19 @@ function openSettingsWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
       preload: path.join(__dirname, '../preload.js')
     }
   })
 
   const htmlPath = path.join(__dirname, '../../..', 'dist/settings.html')
   settingsWindow.loadFile(htmlPath)
+
+  settingsWindow.webContents.on('will-navigate', (event, url) => {
+    event.preventDefault()
+  })
+
+  settingsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
   settingsWindow.once('ready-to-show', () => {
     settingsWindow.show()

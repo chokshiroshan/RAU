@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Commands (invoke/handle pattern - returns Promise)
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   searchFiles: (query) => ipcRenderer.invoke('search-files', query),
+  searchUnified: (query, filters, requestId) => ipcRenderer.invoke('search-unified', query, filters, requestId),
   getTabs: () => ipcRenderer.invoke('get-tabs'),
   activateTab: (tab) => ipcRenderer.invoke('activate-tab', tab),
   getApps: () => ipcRenderer.invoke('get-apps'),
@@ -52,6 +53,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Settings
   showSettings: () => ipcRenderer.invoke('show-settings'),
+
+  // Scriptsmith window
+  showScriptsmith: (prompt) => ipcRenderer.invoke('show-scriptsmith', prompt),
 
   // Automation (Shortcuts & Plugins)
   getShortcuts: () => ipcRenderer.invoke('get-shortcuts'),

@@ -3,7 +3,16 @@
  * Tests the new windowIndexer service and enhanced tab discovery
  */
 
-const { getSystemWindows, getEnhancedApps, clearCache } = require('../src/services/windowIndexer')
+const proxyquire = require('proxyquire')
+
+const execFileMock = (command, args, options, callback) => {
+  const cb = typeof options === 'function' ? options : callback
+  cb(null, '[]', '')
+}
+
+const { getSystemWindows, getEnhancedApps, clearCache } = proxyquire('../electron/main-process/services/windowIndexer', {
+  child_process: { execFile: execFileMock }
+})
 
 async function testWindowIndexer() {
   console.log('\n=== Testing Universal Window Indexer ===\n')

@@ -1,17 +1,8 @@
-/**
- * Universal Window Indexer for RAU
- * Provides fast, comprehensive window discovery across all macOS applications
- * Uses Core Graphics APIs for fast enumeration with AppleScript for detailed data
- */
-
 const { execFile } = require('child_process')
 const path = require('path')
 
-const logger = require('../../electron/main-process/logger')
+const logger = require('../logger')
 
-/**
- * Safe logging utilities to prevent EPIPE crashes
- */
 function safeLog(...args) {
   logger.log('[WindowIndexer]', ...args)
 }
@@ -24,123 +15,123 @@ function safeError(...args) {
   logger.error('[WindowIndexer]', ...args)
 }
 
-// Cache configuration for different app types
 const CACHE_CONFIG = {
-  browsers: { duration: 10000, maxSize: 1000 },     // 10s, high change rate
-  terminals: { duration: 5000, maxSize: 100 },      // 5s, very high change rate
-  editors: { duration: 30000, maxSize: 500 },       // 30s, moderate change rate
-  productivity: { duration: 60000, maxSize: 200 },  // 1min, low change rate
-  system: { duration: 120000, maxSize: 50 },        // 2min, very low change rate
-  universal: { duration: 15000, maxSize: 2000 },    // 15s, default
+  browsers: { duration: 10000, maxSize: 1000 },
+  terminals: { duration: 5000, maxSize: 100 },
+  editors: { duration: 30000, maxSize: 500 },
+  productivity: { duration: 60000, maxSize: 200 },
+  system: { duration: 120000, maxSize: 50 },
+  universal: { duration: 15000, maxSize: 2000 },
 }
 
-// App capability mapping
 const APP_CAPABILITIES = {
-  // Browsers - full tab support
   'Safari': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Google Chrome': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Brave Browser': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Arc': { category: 'browsers', tabs: true, documents: false, paths: true },
   'Comet': { category: 'browsers', tabs: true, documents: false, paths: true },
 
-  // Terminals - tab support, no documents
   'Terminal': { category: 'terminals', tabs: true, documents: false, paths: true },
   'iTerm2': { category: 'terminals', tabs: true, documents: false, paths: true },
 
-  // Editors - tab + document support
   'VS Code': { category: 'editors', tabs: true, documents: true, paths: true },
   'Visual Studio Code': { category: 'editors', tabs: true, documents: true, paths: true },
   'Sublime Text': { category: 'editors', tabs: true, documents: true, paths: true },
   'TextEdit': { category: 'editors', tabs: false, documents: true, paths: true },
 
-  // Productivity apps - document focused
   'Pages': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Keynote': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Numbers': { category: 'productivity', tabs: false, documents: true, paths: true },
   'Preview': { category: 'productivity', tabs: true, documents: true, paths: true },
 
-  // System utilities - basic window info
   'Finder': { category: 'system', tabs: true, documents: false, paths: true },
   'System Preferences': { category: 'system', tabs: false, documents: false, paths: false },
   'Activity Monitor': { category: 'system', tabs: false, documents: false, paths: false },
 }
 
-// Cache state
 let windowCache = null
 let cacheTimestamp = 0
 let cacheKey = null
 let pendingFetch = null
+let lastPermissionError = null
 
-/**
- * Execute AppleScript for window discovery
- */
 function executeWindowDiscoveryScript() {
   return new Promise((resolve) => {
-    // For now, use a fallback approach until AppleScript permissions are resolved
-    // This simulates universal window discovery using app enumeration
+    const script = `
+      const se = Application('System Events')
+      const processes = se.applicationProcesses.whose({ backgroundOnly: false })
+      const results = []
+      for (let i = 0; i < processes.length; i++) {
+        const p = processes[i]
+        const appName = p.name()
+        let pid = null
+        try { pid = p.unixId() } catch (e) { pid = null }
+        let windows = []
+        try { windows = p.windows() } catch (e) { windows = [] }
+        for (let j = 0; j < windows.length; j++) {
+          const w = windows[j]
+          let title = ''
+          try { title = w.name() } catch (e) { title = '' }
+          if (title && title.length > 0) {
+            results.push({ appName, title, pid })
+          }
+        }
+      }
+      JSON.stringify(results)
+    `
 
-    // Get running applications first
-    execFile('osascript', ['-e', 'tell application "System Events" to get name of every application process'], { timeout: 3000 }, (error, stdout, stderr) => {
+    execFile('osascript', ['-l', 'JavaScript', '-e', script], { timeout: 5000, maxBuffer: 5 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error) {
-        safeError('Could not get app list:', error.message)
+        const message = error.message || ''
+        if (message.includes('Not authorized') || message.includes('not allowed to send Apple events')) {
+          lastPermissionError = message
+          safeWarn('Accessibility/Automation permission missing for window discovery')
+        } else {
+          safeError('Window discovery error:', error.message)
+        }
         resolve([])
         return
       }
 
       if (stderr) {
-        safeWarn('Warning getting app list:', stderr)
+        safeWarn('Window discovery stderr:', stderr)
       }
 
       try {
-        const appNames = stdout
-          .split(', ')
-          .map(name => name.trim())
-          .filter(name => name && name !== 'Window Server' && name !== 'loginwindow')
-
-        const windows = []
-        let appId = 1
-
-        // For each app, try to get windows (basic simulation for now)
-        appNames.forEach(appName => {
-          const capability = getAppCapability(appName)
-
-          // Create a basic window entry for demonstration
-          // In production, this would use enhanced AppleScript for each app
-          windows.push({
-            title: `${appName} Window`,
-            appName,
-            windowId: appId++,
-            pid: Math.floor(Math.random() * 10000) + 1000, // Simulated PID
-            bounds: null,
-            layer: 0,
-            type: capability.tabs ? 'window' : 'window',
-            category: capability.category,
-            capability,
+        const parsed = JSON.parse(stdout || '[]')
+        const windows = parsed
+          .filter(entry => entry.appName && entry.title && entry.appName !== 'Window Server' && entry.appName !== 'loginwindow')
+          .map((entry, index) => {
+            const capability = getAppCapability(entry.appName)
+            return {
+              title: entry.title,
+              appName: entry.appName,
+              windowId: index + 1,
+              pid: entry.pid || null,
+              bounds: null,
+              layer: 0,
+              type: capability.tabs ? 'window' : 'window',
+              category: capability.category,
+              capability,
+            }
           })
-        })
 
-        safeLog(`Discovered ${windows.length} simulated windows from ${appNames.length} apps`)
+        lastPermissionError = null
+        safeLog(`Discovered ${windows.length} windows from ${new Set(windows.map(w => w.appName)).size} apps`)
         resolve(windows)
-
       } catch (parseError) {
-        safeError('Parse error:', parseError)
+        safeError('Window discovery parse error:', parseError)
         resolve([])
       }
     })
   })
 }
 
-/**
- * Get app category from capabilities
- */
 function getAppCategory(appName) {
   const capability = APP_CAPABILITIES[appName]
   return capability ? capability.category : 'universal'
 }
 
-/**
- * Get app capability information
- */
 function getAppCapability(appName) {
   return APP_CAPABILITIES[appName] || {
     category: 'universal',
@@ -150,14 +141,9 @@ function getAppCapability(appName) {
   }
 }
 
-/**
- * Filter windows based on selected apps and visibility
- */
 function filterWindows(windows, selectedApps = []) {
-  // If no selection, return all non-system windows
   if (!Array.isArray(selectedApps) || selectedApps.length === 0) {
     return windows.filter(window => {
-      // Exclude system dialogs and background windows
       return window.title &&
         window.title !== '' &&
         window.layer >= 0 &&
@@ -166,37 +152,24 @@ function filterWindows(windows, selectedApps = []) {
     })
   }
 
-  // Filter by selected apps
   const selectedSet = new Set(selectedApps.map(name => name.toLowerCase()))
   return windows.filter(window => {
     const appNameLower = window.appName.toLowerCase()
-
-    // Check if app is selected (directly or by alias)
-    if (selectedSet.has(appNameLower)) {
-      return true
-    }
-
-    // Check common aliases
+    if (selectedSet.has(appNameLower)) return true
     if (appNameLower === 'google chrome' && selectedSet.has('chrome')) return true
     if (appNameLower === 'brave browser' && selectedSet.has('brave')) return true
     if (appNameLower === 'visual studio code' && selectedSet.has('vs code')) return true
-
     return false
   })
 }
 
-/**
- * Get system windows using native Core Graphics discovery
- */
 async function getSystemWindows(options = {}) {
   const { selectedApps = [] } = options
   const selectionKey = buildSelectionKey(selectedApps)
   const now = Date.now()
 
-  // Determine cache duration for this selection
   const cacheConfig = determineCacheConfig(selectedApps)
 
-  // Return cached if fresh
   if (windowCache &&
     windowCache.length > 0 &&
     cacheKey === selectionKey &&
@@ -205,30 +178,26 @@ async function getSystemWindows(options = {}) {
     return windowCache
   }
 
-  // Prevent concurrent fetches
   if (pendingFetch && cacheKey === selectionKey) {
     return pendingFetch
   }
 
-  // Fetch fresh windows
   pendingFetch = (async () => {
     try {
       safeLog('Discovering system windows...')
       const rawWindows = await executeWindowDiscoveryScript()
 
-      // Filter and enhance windows
       const filteredWindows = filterWindows(rawWindows, selectedApps)
       const enhancedWindows = filteredWindows.map(window => ({
         ...window,
         capability: getAppCapability(window.appName),
-        url: '', // Will be populated by app-specific scripts
-        windowIndex: 1, // Default, will be enhanced by app scripts
+        url: '',
+        windowIndex: 1,
         tabIndex: 1,
-        browser: window.appName, // For compatibility with existing tab system
-        name: window.title, // For compatibility
+        browser: window.appName,
+        name: window.title,
       }))
 
-      // Update cache
       windowCache = enhancedWindows
       cacheTimestamp = now
       cacheKey = selectionKey
@@ -237,7 +206,7 @@ async function getSystemWindows(options = {}) {
       return enhancedWindows
     } catch (error) {
       safeError('Error discovering windows:', error)
-      return windowCache || [] // Return stale cache if available
+      return windowCache || []
     } finally {
       pendingFetch = null
     }
@@ -246,17 +215,12 @@ async function getSystemWindows(options = {}) {
   return pendingFetch
 }
 
-/**
- * Determine cache configuration based on selected apps
- */
 function determineCacheConfig(selectedApps) {
   if (!Array.isArray(selectedApps) || selectedApps.length === 0) {
     return CACHE_CONFIG.universal
   }
 
-  // Find the most restrictive cache duration among selected apps
   let minDuration = CACHE_CONFIG.universal.duration
-
   selectedApps.forEach(appName => {
     const capability = APP_CAPABILITIES[appName]
     if (capability) {
@@ -270,13 +234,8 @@ function determineCacheConfig(selectedApps) {
   return { duration: minDuration, maxSize: CACHE_CONFIG.universal.maxSize }
 }
 
-/**
- * Build cache key from selected apps
- */
 function buildSelectionKey(selectedApps) {
-  if (!Array.isArray(selectedApps) || selectedApps.length === 0) {
-    return 'all'
-  }
+  if (!Array.isArray(selectedApps) || selectedApps.length === 0) return 'all'
   return selectedApps
     .map(name => name.trim().toLowerCase())
     .filter(Boolean)
@@ -284,9 +243,6 @@ function buildSelectionKey(selectedApps) {
     .join('|')
 }
 
-/**
- * Clear window cache
- */
 function clearCache() {
   windowCache = null
   cacheTimestamp = 0
@@ -294,9 +250,6 @@ function clearCache() {
   safeLog('Cache cleared')
 }
 
-/**
- * Get apps with enhanced capabilities
- */
 function getEnhancedApps() {
   return Object.keys(APP_CAPABILITIES).map(appName => ({
     name: appName,
@@ -304,17 +257,11 @@ function getEnhancedApps() {
   }))
 }
 
-/**
- * Check if an app supports tabs
- */
 function supportsTabs(appName) {
   const capability = APP_CAPABILITIES[appName]
   return capability ? capability.tabs : false
 }
 
-/**
- * Check if an app supports documents
- */
 function supportsDocuments(appName) {
   const capability = APP_CAPABILITIES[appName]
   return capability ? capability.documents : false
@@ -323,6 +270,7 @@ function supportsDocuments(appName) {
 module.exports = {
   getSystemWindows,
   clearCache,
+  getPermissionStatus: () => ({ granted: !lastPermissionError, error: lastPermissionError }),
   getEnhancedApps,
   supportsTabs,
   supportsDocuments,

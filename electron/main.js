@@ -7,7 +7,14 @@
 
 const { app, BrowserWindow } = require('electron')
 const { execFile } = require('child_process')
-const { prewarmTabs } = require('../src/services/tabFetcher')
+const { prewarmTabs } = require('./main-process/services/tabFetcher')
+const { getSettings } = require('./main-process/config')
+let Sentry = null
+try {
+  Sentry = require('@sentry/electron/main')
+} catch {
+  Sentry = null
+}
 const logger = require('./main-process/logger')
 const { registerHandlers } = require('./main-process/handlers')
 
@@ -63,6 +70,19 @@ function preWarmAppsCache() {
   })
 }
 
+function initializeTelemetry() {
+  const settings = getSettings()
+  const dsn = process.env.SENTRY_DSN
+  if (settings.telemetryEnabled && dsn && Sentry) {
+    Sentry.init({
+      dsn,
+      tracesSampleRate: 0.1,
+      sendDefaultPii: false,
+    })
+    logger.log('[Telemetry] Sentry initialized')
+  }
+}
+
 // ============================================================================
 // APP LIFECYCLE
 // ============================================================================
@@ -80,6 +100,9 @@ app.whenReady().then(() => {
 
   // Initialize module dependencies
   initializeModules()
+
+  // Initialize telemetry (opt-in)
+  initializeTelemetry()
 
   // Set up global error handlers
   errorHandler.setupGlobalErrorHandlers()

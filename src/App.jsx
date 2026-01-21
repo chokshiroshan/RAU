@@ -3,8 +3,6 @@ import SearchBar from './components/SearchBar'
 import ResultsList from './components/ResultsList'
 import Onboarding from './components/Onboarding'
 import Settings from './components/Settings'
-import ScriptsmithModal from './components/ScriptsmithModal'
-import { searchUnified } from './services/unifiedSearch'
 import { ipcRenderer } from './services/electron'
 import { safeInvoke } from './utils/ipc'
 import { getHistory, addToHistory } from './services/historyService'
@@ -37,8 +35,6 @@ function App() {
   const [windowHeight, setWindowHeight] = useState(62) // Collapsed by default
   const [showSettings, setShowSettings] = useState(false)
   const [appSettings, setAppSettings] = useState({})
-  const [showScriptsmith, setShowScriptsmith] = useState(false)
-  const [scriptsmithPrompt, setScriptsmithPrompt] = useState('')
 
   // Navigation mode tracking: prevents mouse hover from changing selection during keyboard navigation
   const isKeyboardNavigatingRef = useRef(false)
@@ -135,8 +131,8 @@ function App() {
     }
     
     try {
-      logger.debug('App', `performSearch: calling searchUnified...`)
-      const searchResults = await searchUnified(searchQuery, activeFilters, settings)
+      logger.debug('App', `performSearch: calling search-unified IPC...`)
+      const searchResults = await safeInvoke('search-unified', searchQuery, activeFilters, currentSearchId)
       logger.debug('App', `performSearch: searchUnified returned ${searchResults?.length || 0} results`)
       if (searchIdRef.current !== currentSearchId) {
         logger.debug('App', `performSearch: stale search #${currentSearchId}, ignoring`)
@@ -179,9 +175,8 @@ function App() {
     if (trimmedQuery.toLowerCase().startsWith('/gen ')) {
       const genPrompt = trimmedQuery.slice(5).trim()
       if (genPrompt) {
-        logger.debug('App', 'Detected /gen command, opening Scriptsmith')
-        setScriptsmithPrompt(genPrompt)
-        setShowScriptsmith(true)
+        logger.debug('App', 'Detected /gen command, opening Scriptsmith window')
+        safeInvoke('show-scriptsmith', genPrompt)
         setQuery('')
       }
       return
@@ -219,17 +214,6 @@ function App() {
     const hasResults = hasQuery && (isLoading || results.length > 0)
     const needsExpanded = hasResults || showSettings
 
-    // Scriptsmith specific dimensions
-    if (showScriptsmith) {
-      if (ipcRenderer) {
-        safeInvoke('resize-window', {
-          height: EXPANDED_HEIGHT,
-          width: 850 // Slightly wider than the 800px modal to accommodate shadows/padding
-        })
-      }
-      return
-    }
-
     const newHeight = needsExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT
     setWindowHeight(newHeight)
 
@@ -240,7 +224,7 @@ function App() {
         width: 1000 // Standard constant width
       })
     }
-  }, [results.length, hasQuery, isLoading, showOnboarding, showSettings, showScriptsmith])
+  }, [results.length, hasQuery, isLoading, showOnboarding, showSettings])
 
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e) => {
@@ -258,7 +242,7 @@ function App() {
     )
 
     // If typing a regular character outside of an input field
-    if (e.key.length === 1 && !isModifier && !isInputFocused) {
+    if (e.key.length === 1 && !isModifier && !isInputFocused && e.key !== ' ') {
       // If settings open, close it
       if (showSettings) setShowSettings(false)
 
@@ -387,8 +371,7 @@ function App() {
 
           // Handle Scriptsmith trigger
           if (result.type === 'scriptsmith-trigger') {
-            setScriptsmithPrompt(result.prompt || '')
-            setShowScriptsmith(true)
+            safeInvoke('show-scriptsmith', result.prompt || '')
             setQuery('')
             return
           }
@@ -477,8 +460,7 @@ function App() {
         }
       } else if (result.type === 'scriptsmith-trigger') {
         logger.debug('App', 'Opening Scriptsmith via click')
-        setScriptsmithPrompt(result.prompt || '')
-        setShowScriptsmith(true)
+        safeInvoke('show-scriptsmith', result.prompt || '')
         setQuery('')
       } else if (result.type === 'tab' || result.type === 'window') {
         if (ipcRenderer) {
@@ -566,11 +548,6 @@ function App() {
         )}
       </div>
 
-      <ScriptsmithModal
-        isOpen={showScriptsmith}
-        onClose={() => setShowScriptsmith(false)}
-        initialPrompt={scriptsmithPrompt}
-      />
     </div>
   )
 }

@@ -7,7 +7,8 @@ function Settings({ isOpen, onClose }) {
     searchApps: true,
     searchTabs: true,
     searchFiles: true,
-    fileExclusions: []
+    fileExclusions: [],
+    telemetryEnabled: false
   })
   
   // Bang management state
@@ -789,6 +790,40 @@ function Settings({ isOpen, onClose }) {
               className={`settings-toggle ${settings.searchPlugins !== false ? 'active' : ''}`}
               onClick={() => handleToggle('searchPlugins')}
               aria-label="Toggle plugins search"
+            >
+              <span className="settings-toggle-slider" />
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3 className="settings-section-title">Privacy</h3>
+          <div className="settings-item">
+            <div className="settings-item-info">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="settings-item-icon"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <div>
+                <div className="settings-item-label">Crash & Performance Telemetry</div>
+                <div className="settings-item-description">Opt-in diagnostics; no queries, file paths, or URLs are sent</div>
+              </div>
+            </div>
+            <button
+              className={`settings-toggle ${settings.telemetryEnabled ? 'active' : ''}`}
+              onClick={() => handleToggle('telemetryEnabled')}
+              aria-label="Toggle telemetry"
             >
               <span className="settings-toggle-slider" />
             </button>

@@ -124,12 +124,12 @@ function getModels(_event, provider) {
   return MODELS[provider] || []
 }
 
-function getCurrentConfig() {
-  return llmService.getCurrentConfig()
+async function getCurrentConfig() {
+  return await llmService.getCurrentConfig()
 }
 
-function hasApiKey() {
-  return Boolean(llmService.getApiKey())
+async function hasApiKey() {
+  return Boolean(await llmService.getApiKey())
 }
 
 module.exports = {
