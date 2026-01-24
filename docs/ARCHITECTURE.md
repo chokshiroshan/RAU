@@ -89,21 +89,22 @@ const ResultsList = ({ results, selectedIndex, onSelect }) => {
 }
 ```
 
-### Service Layer (`src/services/`)
+### Service Layer (Main Process `electron/main-process/services/`)
 
 #### Search Services Architecture
 
 ```
-unifiedSearch.js (Orchestrator)
-├── appSearch.js     → mdfind → application results
-├── tabFetcher.js    → AppleScript → browser tabs
-├── fileSearch.js    → mdfind → file results
-└── commandSearch.js → local → system commands
+unifiedSearchService.js (Orchestrator)
+├── actionHandler.js     → mdfind → application results
+├── tabFetcher.js        → AppleScript → browser tabs
+├── searchHandler.js     → mdfind → file results
+└── systemHandler.js     → local → system commands
 ```
 
 **Orchestrator Pattern**:
 ```javascript
-export async function searchUnified(query, filters) {
+// electron/main-process/services/unifiedSearchService.js
+async function searchUnified(query, filters) {
   // 1. Validate and preprocess query
   if (!isValidQuery(query)) return []
   
@@ -113,8 +114,8 @@ export async function searchUnified(query, filters) {
   
   // 3. Execute parallel searches
   const searchPromises = [
-    searchApps(query),
-    searchTabs(query),
+    getApps(query),
+    getTabs(query),
     searchFiles(query),
     searchCommands(query)
   ].filter(Boolean)
@@ -202,7 +203,7 @@ async function openApp(_event, appPath) {
 
 **Renderer Process Service**:
 ```javascript
-// src/services/appSearch.js
+// src/services/electron.js
 import { safeInvoke } from '../utils/ipc'
 
 export async function getAllApps() {
@@ -282,7 +283,7 @@ end tell
 
 **File Search via mdfind**:
 ```javascript
-// src/services/fileSearch.js
+// electron/main-process/handlers/searchHandler.js
 async function searchFiles(query) {
   const results = await new Promise((resolve) => {
     execFile('mdfind', [

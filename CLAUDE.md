@@ -37,19 +37,19 @@ npm run dist:mac       # Build distributable macOS app
 
 **Search Flow:**
 1. User types in SearchBar → debounced query
-2. `unifiedSearch.js` orchestrates parallel searches: apps, tabs, files, commands
-3. Results combined and ranked with Fuse.js fuzzy matching
-4. Calculator expressions (`2+2`) and commands (`sleep`, `lock`) handled specially
+2. `search-unified` IPC call triggers `unifiedSearchService.js` in Main Process
+3. Service orchestrates parallel searches: apps, tabs, files, commands
+4. Results combined and ranked with Fuse.js in Main Process
 
 **Tab Fetching Flow:**
-1. `tabFetcher.js` executes AppleScripts in `src/scripts/*.applescript`
+1. `tabFetcher.js` (Main Process) executes AppleScripts in `src/scripts/*.applescript`
 2. Scripts enumerate browser tabs (Safari, Chrome, Brave, Arc, Comet, Terminal)
 3. Results cached with SWR pattern (10s cache, background refresh)
 4. Universal window discovery via `windowIndexer.js` for non-browser apps
 
 **IPC Handler Registration:**
 - All handlers registered in `electron/main-process/handlers/index.js`
-- Handlers: `searchHandler`, `actionHandler`, `systemHandler`, `windowHandler`
+- Handlers: `searchHandler`, `actionHandler`, `systemHandler`, `windowHandler`, `unifiedSearchHandler`
 
 ### Main Process Modules (`electron/main-process/modules/`)
 - `windowManager.js`: Frameless window, multi-monitor positioning
@@ -57,13 +57,16 @@ npm run dist:mac       # Build distributable macOS app
 - `settingsWindow.js`: Settings panel management
 - `errorHandler.js`: Global error recovery
 
-### Renderer Services (`src/services/`)
-- `unifiedSearch.js`: Main search orchestrator with Fuse.js
+### Main Process Services (`electron/main-process/services/`)
+- `unifiedSearchService.js`: Main search orchestrator with Fuse.js
 - `tabFetcher.js`: Browser tab discovery via AppleScript
-- `appSearch.js`: Application discovery via `mdfind`
-- `fileSearch.js`: File search via Spotlight/mdfind
-- `commandSearch.js`: System commands (sleep, lock, restart)
-- `windowIndexer.js`: Universal window discovery
+- `iconExtractor.js`: App icon extraction
+- `shortcutsService.js`: Shortcuts management
+- `pluginService.js`: Plugin management
+
+### Renderer Services (`src/services/`)
+- `electron.js`: IPC wrapper
+- `historyService.js`: Search history management
 
 ## Security Requirements
 

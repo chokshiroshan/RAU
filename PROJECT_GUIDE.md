@@ -50,7 +50,7 @@ RAU/
 │   │   └── modules/          # Infrastructure (Logger, ErrorHandler)
 ├── src/                      # Frontend (React)
 │   ├── components/           # UI Components (SearchBar, ResultsList)
-│   ├── services/             # Frontend Services (UnifiedSearch)
+│   ├── services/             # Frontend Services (History, Electron)
 │   ├── utils/                # Helpers (IPC, Logger)
 │   └── scripts/              # AppleScript Templates
 ├── shared/                   # Shared Code
@@ -61,15 +61,15 @@ RAU/
 
 ## 🧩 Key Systems
 
-### 1. Unified Search (`src/services/unifiedSearch.js`)
-The search engine orchestrates parallel queries to multiple sources:
+### 1. Unified Search (`electron/main-process/services/unifiedSearchService.js`)
+The search engine orchestrates parallel queries to multiple sources in the main process:
 - **Apps**: Cached list of `.app` bundles (mdfind).
 - **Tabs**: Live AppleScript query to running browsers (Safari, Chrome, Brave, Arc, etc.).
 - **Files**: Live `mdfind` query for user documents.
 - **Commands**: Static list of system actions (Sleep, Lock, etc.).
 - **Plugins**: Custom AppleScript plugins.
 
-Results are aggregated, ranked (Fuse.js), and displayed in a virtualized list (`ResultsList.jsx`).
+Results are aggregated, ranked (Fuse.js), and returned to the renderer process.
 
 ### 2. Tab Fetcher (`electron/main-process/services/tabFetcher.js`)
 A sophisticated module that:

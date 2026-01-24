@@ -88,12 +88,8 @@ RAU/
 │   │   ├── SearchBar.jsx       # Search input component
 │   │   ├── ResultsList.jsx     # Results display with virtualization
 │   │   └── Onboarding.jsx      # First-run experience
-│   ├── services/               # Search and data services
-│   │   ├── unifiedSearch.js    # Main search orchestrator
-│   │   ├── tabFetcher.js       # Browser tab integration
-│   │   ├── fileSearch.js       # File system search
-│   │   ├── appSearch.js        # Application discovery
-│   │   ├── commandSearch.js    # System commands
+│   ├── services/               # Frontend services
+│   │   ├── electron.js         # Electron IPC wrapper
 │   │   └── historyService.js   # Search history management
 │   ├── constants/              # Configuration constants
 │   ├── utils/                  # Utility functions

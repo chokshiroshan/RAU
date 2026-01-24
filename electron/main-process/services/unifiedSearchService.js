@@ -117,7 +117,7 @@ async function searchUnified(query, filters = {}, requestId, senderId) {
     ...filters,
   }
 
-  if (!query || query.trim() === '') return []
+  if (typeof query !== 'string') return []
   const trimmed = query.trim()
   if (trimmed.length < 2) return []
 

@@ -1,7 +1,0 @@
-/**
- * Shared configuration for RAU
- * Single source of truth for both main and renderer processes
- */
-
-export * from './constants.js'
-export * from './defaults.js'

@@ -39,7 +39,8 @@ npm run dev
 
 #### File Organization
 - **Components**: `src/components/ComponentName.jsx` (PascalCase)
-- **Services**: `src/services/serviceName.js` (camelCase)
+- **Frontend Services**: `src/services/serviceName.js` (camelCase)
+- **Main Services**: `electron/main-process/services/serviceName.js` (camelCase)
 - **Constants**: `src/constants/CONSTANT_NAME.js` (UPPER_SNAKE_CASE)
 - **Tests**: `tests/serviceName.test.js` (descriptive)
 

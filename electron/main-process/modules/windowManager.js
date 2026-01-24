@@ -34,14 +34,11 @@ function getMainWindow() {
 }
 
 /**
- * Reposition window to the active screen (where cursor is)
- * @returns {boolean} True if repositioning succeeded
+ * Calculate window position based on active screen and user settings
+ * @param {number} expandedHeightEstimate - Estimated height for centering calculations
+ * @returns {Object} { x, y } coordinates
  */
-function repositionWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    return false
-  }
-
+function calculateWindowPosition(expandedHeightEstimate = 700) {
   const cursorPosition = screen.getCursorScreenPoint()
   const activeDisplay = screen.getDisplayNearestPoint(cursorPosition)
   const { width, height } = activeDisplay.workAreaSize
@@ -51,9 +48,6 @@ function repositionWindow() {
   // Get user preference for window position
   const settings = getSettings()
   const position = settings.windowPosition || 'center'
-  
-  // Estimate expanded height for centering calculations
-  const EXPANDED_HEIGHT_ESTIMATE = 700
 
   let x, y
 
@@ -64,9 +58,22 @@ function repositionWindow() {
   } else {
     // Default: Center screen (visually pleasing center based on expanded height)
     x = Math.round(displayX + (width - WINDOW_WIDTH) / 2)
-    y = Math.round(screenY + (screenHeight - EXPANDED_HEIGHT_ESTIMATE) / 2)
+    y = Math.round(screenY + (screenHeight - expandedHeightEstimate) / 2)
   }
 
+  return { x, y }
+}
+
+/**
+ * Reposition window to the active screen (where cursor is)
+ * @returns {boolean} True if repositioning succeeded
+ */
+function repositionWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return false
+  }
+
+  const { x, y } = calculateWindowPosition(700)
   mainWindow.setPosition(x, y)
   return true
 }
@@ -82,32 +89,7 @@ function createWindow() {
   }
 
   windowReadyPromise = new Promise((resolve, reject) => {
-    // Get cursor position to determine which screen to show on
-    const cursorPosition = screen.getCursorScreenPoint()
-    const activeDisplay = screen.getDisplayNearestPoint(cursorPosition)
-    const { width, height } = activeDisplay.workAreaSize
-    const { x: displayX, y: displayY } = activeDisplay.workArea
-    const { height: screenHeight, y: screenY } = activeDisplay.bounds
-
-    // Get user preference for window position
-    const settings = getSettings()
-    const position = settings.windowPosition || 'center'
-    
-    // Estimate expanded height for centering calculations
-    const EXPANDED_HEIGHT_ESTIMATE = 850
-
-    let x, y
-
-    if (position === 'top') {
-      // Spotlight style: Top center (15% down)
-      x = Math.round(displayX + (width - WINDOW_WIDTH) / 2)
-      y = Math.round(displayY + (height * 0.15))
-    } else {
-      // Default: Center screen (visually pleasing center based on expanded height)
-      // Use screen bounds (ignoring dock/menu bar) for true visual center
-      x = Math.round(displayX + (width - WINDOW_WIDTH) / 2)
-      y = Math.round(screenY + (screenHeight - EXPANDED_HEIGHT_ESTIMATE) / 2)
-    }
+    const { x, y } = calculateWindowPosition(850)
 
     // Transparent frameless window - content floats with its own background
     mainWindow = new BrowserWindow({
