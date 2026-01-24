@@ -1,7 +1,13 @@
 const https = require('https')
-const keytar = require('keytar')
 const logger = require('../logger')
 const { getSettings, saveSettings } = require('../config')
+
+let keytar = null
+try {
+  keytar = require('keytar')
+} catch (error) {
+  logger.warn('[LLMService] Keychain unavailable, falling back to settings storage:', error?.message || error)
+}
 
 const PROVIDERS = {
   OPENAI: 'openai',
@@ -58,6 +64,18 @@ const ENDPOINTS = {
   }
 }
 
+const SETTINGS_KEYS = {
+  [PROVIDERS.OPENAI]: 'openaiApiKey',
+  [PROVIDERS.ANTHROPIC]: 'anthropicApiKey',
+  [PROVIDERS.GOOGLE]: 'googleApiKey'
+}
+
+const ENV_KEYS = {
+  [PROVIDERS.OPENAI]: 'OPENAI_API_KEY',
+  [PROVIDERS.ANTHROPIC]: 'ANTHROPIC_API_KEY',
+  [PROVIDERS.GOOGLE]: 'GOOGLE_API_KEY'
+}
+
 class LLMService {
   constructor() {
     this.provider = PROVIDERS.ANTHROPIC
@@ -67,30 +85,26 @@ class LLMService {
 
   async getApiKey(provider = this.provider) {
     const account = `${provider}-api-key`
-    try {
-      const stored = await keytar.getPassword(this.keychainService, account)
-      if (stored) return stored
-    } catch (error) {
-      logger.error('[LLMService] Keychain lookup failed:', error)
+    if (keytar) {
+      try {
+        const stored = await keytar.getPassword(this.keychainService, account)
+        if (stored) return stored
+      } catch (error) {
+        logger.error('[LLMService] Keychain lookup failed:', error)
+      }
     }
 
     const settings = getSettings()
     let legacyKey = null
-    switch (provider) {
-      case PROVIDERS.OPENAI:
-        legacyKey = settings.openaiApiKey || process.env.OPENAI_API_KEY
-        break
-      case PROVIDERS.ANTHROPIC:
-        legacyKey = settings.anthropicApiKey || process.env.ANTHROPIC_API_KEY
-        break
-      case PROVIDERS.GOOGLE:
-        legacyKey = settings.googleApiKey || process.env.GOOGLE_API_KEY
-        break
-      default:
-        legacyKey = null
+    const settingsKey = SETTINGS_KEYS[provider]
+    if (settingsKey && settings[settingsKey]) {
+      legacyKey = settings[settingsKey]
+    } else {
+      const envKey = ENV_KEYS[provider]
+      legacyKey = envKey ? process.env[envKey] : null
     }
 
-    if (legacyKey) {
+    if (legacyKey && keytar) {
       try {
         await keytar.setPassword(this.keychainService, account, legacyKey)
         delete settings.openaiApiKey
@@ -138,13 +152,26 @@ class LLMService {
 
   async saveApiKey(provider, apiKey) {
     const account = `${provider}-api-key`
-    try {
-      await keytar.setPassword(this.keychainService, account, apiKey)
-      logger.log(`[LLMService] API key saved to Keychain for: ${provider}`)
-    } catch (error) {
-      logger.error(`[LLMService] Failed to save API key to Keychain:`, error)
-      throw error
+    if (keytar) {
+      try {
+        await keytar.setPassword(this.keychainService, account, apiKey)
+        logger.log(`[LLMService] API key saved to Keychain for: ${provider}`)
+        return
+      } catch (error) {
+        logger.error(`[LLMService] Failed to save API key to Keychain:`, error)
+        throw error
+      }
     }
+
+    const settingsKey = SETTINGS_KEYS[provider]
+    if (!settingsKey) {
+      throw new Error(`Invalid provider: ${provider}`)
+    }
+
+    const settings = getSettings()
+    settings[settingsKey] = apiKey
+    saveSettings(settings)
+    logger.warn(`[LLMService] Keychain unavailable; stored API key in settings for: ${provider}`)
   }
 
   async generate(prompt, systemPrompt = '') {

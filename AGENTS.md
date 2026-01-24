@@ -54,7 +54,6 @@ npm run dist:mac       # Build distributable macOS app
 // ✅ Frontend (React components)
 import React, { useState, useCallback } from 'react'
 import SearchBar from './components/SearchBar'
-import { searchUnified } from './services/unifiedSearch'
 import { safeInvoke } from './utils/ipc' // Use safeInvoke for IPC calls
 
 // ✅ Backend (Electron main process)
@@ -97,7 +96,7 @@ if (results) {
 - Use camelCase for variables and functions
 - Use PascalCase for React components and classes
 - Use descriptive names with context (e.g., `searchUnified`, `validateAppPath`)
-- File names should match their main export: `SearchBar.jsx`, `unifiedSearch.js`
+- File names should match their main export: `SearchBar.jsx`, `unifiedSearchService.js`
 
 ### Component Structure
 - Use React.forwardRef for components that need ref forwarding
@@ -122,8 +121,9 @@ export default SearchBar
 ### Code Organization
 - Main process modules in `electron/main-process/modules/`
 - IPC handlers in `electron/main-process/handlers/`
+- Main process services in `electron/main-process/services/`
 - React components in `src/components/`
-- Services in `src/services/`
+- Frontend services in `src/services/`
 - Shared utilities in `shared/`
 - Tests in `tests/` matching service names
 

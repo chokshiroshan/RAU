@@ -109,6 +109,33 @@ const results = await electronAPI.invoke('search-files', {
 
 ---
 
+#### `SEARCH_UNIFIED`
+Main unified search across all categories.
+
+**Request**: Query string and filters
+```javascript
+const results = await electronAPI.invoke('search-unified', "query", {
+  apps: true,
+  tabs: true
+})
+```
+
+**Response**: Array of ranked result objects
+```javascript
+[
+  {
+    type: "app",
+    name: "Safari",
+    path: "/Applications/Safari.app",
+    score: 0.01
+  }
+]
+```
+
+**Handler**: `unifiedSearchHandler.searchUnified()`
+
+---
+
 ### Action Channels
 
 #### `OPEN_APP`
@@ -310,76 +337,25 @@ electronAPI.send('hide-window') // Note: send, not invoke
 
 ---
 
-## 🎨 Renderer Service APIs
+## 🔌 Extension Points
 
-### Main Services
+### Adding New Search Categories
 
-#### `unifiedSearch.js`
+1. **Create Service**: `electron/main-process/services/newSearchService.js`
+2. **Add to Orchestrator**: Update `unifiedSearchService.js`
+3. **Add IPC Handler**: Create handler in `electron/main-process/handlers/`
+4. **Add Channel**: Update `src/constants/ipc.js`
+5. **Update Settings**: Add toggle in config
 
-**`searchUnified(query, filters)`**
-Main search function that orchestrates all search types.
+### Adding New Browser Support
 
-**Parameters**:
-- `query` (string): Search query
-- `filters` (object, optional): `{ apps, files, tabs, commands }`
+1. **Create AppleScript**: `src/scripts/newbrowser.applescript`
+2. **Update Tab Fetcher**: Add fetch function in `tabFetcher.js`
+3. **Add Constants**: Update browser names and aliases
+4. **Add Activation**: Create activation script
+5. **Update Settings**: Add to browser selection UI
 
-**Returns**: Promise<Array> - Search results
-
-```javascript
-const results = await searchUnified("github", {
-  apps: true,
-  tabs: true,
-  files: false,
-  commands: true
-})
-```
-
-**Result Object**:
-```javascript
-{
-  id: "unique-id",
-  type: "app" | "tab" | "file" | "command" | "calculator" | "web",
-  name: "Display Name",
-  title: "Optional Title", // for tabs
-  url: "Optional URL",   // for tabs/web
-  path: "Optional Path", // for files/apps
-  priority: 10,          // for ranking
-  score: 0.1            // Fuse.js score
-}
-```
-
----
-
-#### `tabFetcher.js`
-
-**`getAllTabs(options)`**
-Get all browser tabs with filtering options.
-
-**Parameters**:
-- `options` (object): `{ selectedApps: [], forceRefresh: boolean }`
-
-**Returns**: Promise<Array> - Tab objects
-
----
-
-#### `appSearch.js`
-
-**`getAllApps()`**
-Get all installed applications.
-
-**Returns**: Promise<Array> - App objects
-
----
-
-#### `fileSearch.js`
-
-**`searchFiles(query)`**
-Search files by name.
-
-**Parameters**:
-- `query` (string): Search query
-
-**Returns**: Promise<Array> - File objects
+### Adding New System Commands
 
 ---
 
@@ -533,32 +509,6 @@ All async operations return standardized responses:
 4. **System Errors**: OS-level failures
 5. **Network Errors**: External service failures
 
----
-
-## 🔌 Extension Points
-
-### Adding New Search Categories
-
-1. **Create Service**: `src/services/newSearch.js`
-2. **Add to Orchestrator**: Update `unifiedSearch.js`
-3. **Add IPC Handler**: Create handler in `electron/main-process/handlers/`
-4. **Add Channel**: Update `src/constants/ipc.js`
-5. **Update Settings**: Add toggle in config
-
-### Adding New Browser Support
-
-1. **Create AppleScript**: `src/scripts/newbrowser.applescript`
-2. **Update Tab Fetcher**: Add fetch function in `tabFetcher.js`
-3. **Add Constants**: Update browser names and aliases
-4. **Add Activation**: Create activation script
-5. **Update Settings**: Add to browser selection UI
-
-### Adding New System Commands
-
-1. **Update Command List**: Add to `commandSearch.js`
-2. **Add Handler**: Update `systemHandler.js`
-3. **Add Validation**: Create validator if needed
-4. **Update Documentation**: Add to API docs
 
 ---
 
